@@ -35,6 +35,7 @@ Future<void> init() async {
   );
   Get.lazyPut<TaskRepository>(
   () => TaskRepositoryImpl(
+    localDataSource: Get.find(),
     remoteDataSource: Get.find(), 
     networkInfo: Get.find(),
   ),

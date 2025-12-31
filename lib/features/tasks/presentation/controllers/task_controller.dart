@@ -17,7 +17,13 @@ class TaskController extends GetxController with StateMixin<List<TaskModel>> {
   void onInit() {
     super.onInit();
     fetchInitialTasks();
-    
+    /*
+    Connectivity().onConnectivityChanged.listen((result) {
+      if (result != ConnectivityResult.none) {
+        syncPendingTasks();
+      }
+    });
+    */
  
     scrollController.addListener(() {
       if (scrollController.position.pixels >= scrollController.position.maxScrollExtent &&
@@ -27,7 +33,23 @@ class TaskController extends GetxController with StateMixin<List<TaskModel>> {
       }
     });
   }
-
+void syncPendingTasks() async {
+   // 1. Local DB se unsynced tasks nikalo
+    // final unsyncedList = await localDataSource.getUnsyncedTasks();
+    
+    // 2. Loop chala kar API par bhejo
+    /*
+    for (var task in unsyncedList) {
+       try {
+         final serverId = await remoteDataSource.createTask(task.toMap());
+         await localDataSource.updateTaskSyncStatus(task.id, serverId);
+       } catch (e) {
+         // Retry later
+       }
+    }
+    */
+    debugPrint("Sync check completed");
+  } 
   // First Time Load
   Future<void> fetchInitialTasks() async {
     page = 1;
