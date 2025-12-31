@@ -1,4 +1,4 @@
-name: tierce_interview_task
+name: smart_task_manager
 description: "A new Flutter project."
 publish_to: 'none'
 version: 0.1.0
@@ -9,6 +9,12 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  dio: ^5.9.0
+  get: ^4.7.3
+  flutter_secure_storage: ^10.0.0
+  drift: ^2.30.0
+  sqlite3_flutter_libs: ^0.5.41
+  internet_connection_checker: ^3.0.1
 
 dev_dependencies:
   flutter_test:

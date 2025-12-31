@@ -1,4 +1,4 @@
-package com.example.tierce_interview_task
+package com.example.smart_task_manager
 
 import io.flutter.embedding.android.FlutterActivity
 

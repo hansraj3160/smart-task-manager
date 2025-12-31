@@ -1,6 +1,6 @@
 {
-    "name": "tierce_interview_task",
-    "short_name": "tierce_interview_task",
+    "name": "smart_task_manager",
+    "short_name": "smart_task_manager",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

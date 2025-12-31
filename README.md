@@ -1,3 +1,3 @@
-# tierce_interview_task
+# smart_task_manager
 
 A new Flutter project.
