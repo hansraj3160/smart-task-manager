@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../../../config/routes.dart';
+import '../../../../core/utils/validators.dart';
 import '../controllers/auth_controller.dart';
 
 class LoginScreen extends StatelessWidget {
@@ -35,11 +36,7 @@ class LoginScreen extends StatelessWidget {
                     labelText: "Email",
                     prefixIcon: Icon(Icons.email_outlined),
                   ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) return 'Email is required';
-                    if (!GetUtils.isEmail(value)) return 'Enter a valid email';
-                    return null;
-                  },
+                  validator: (value) => Validators().emailValidation(value)
                 ),
                 const SizedBox(height: 20),
 
@@ -59,11 +56,7 @@ class LoginScreen extends StatelessWidget {
                       onPressed: () => controller.togglePasswordVisibility(),
                     ),
                   ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) return 'Password is required';
-                    if (value.length < 6) return 'Min 6 characters required';
-                    return null;
-                  },
+                  validator: (value) =>Validators().passwordValidation(value)
                 )),
                 const SizedBox(height: 30),
 
@@ -81,7 +74,9 @@ class LoginScreen extends StatelessWidget {
 
                 const SizedBox(height: 15),
                 TextButton(
-                  onPressed: () => Get.toNamed(AppRoutes.signup),
+                  onPressed: () { 
+               controller.clearTextFields();
+                    Get.toNamed(AppRoutes.signup);},
                   child: const Text("Don't have an account? Sign Up"),
                 ),
               ],

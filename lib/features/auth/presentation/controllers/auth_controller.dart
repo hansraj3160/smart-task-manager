@@ -22,11 +22,14 @@ class AuthController extends GetxController {
 
   var isLoading = false.obs;
   var isPasswordHidden = true.obs;
+  var isConfirmPasswordHidden = true.obs;
 
   void togglePasswordVisibility() {
     isPasswordHidden.value = !isPasswordHidden.value;
   }
-
+void toggleConfirmPasswordVisibility() {
+    isConfirmPasswordHidden.value = !isConfirmPasswordHidden.value;
+  }
   Future<void> login() async {
     await _storage.delete(key:AppConstants.refreshToken);
     await _storage.delete(key:  AppConstants.token);
@@ -99,6 +102,12 @@ class AuthController extends GetxController {
     } finally {
       isLoading.value = false;
     }
+  }
+  void clearTextFields() {
+    emailController.clear();
+    passwordController.clear();
+    nameController.clear();
+    confirmPasswordController.clear();
   }
   @override
   void onClose() {

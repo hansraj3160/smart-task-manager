@@ -123,23 +123,12 @@ class ApiClient extends GetxService {
 
   Future<get_pkg.Response> postData(String uri, dynamic body) async {
     try {
-      if (kDebugMode) {
-        debugPrint('[ApiClient] POST $uri');
-        debugPrint('[ApiClient] Body: $body');
-      }
+    
       var response = await _dio.post(uri, data: body);
-      if (kDebugMode) {
-        debugPrint('[ApiClient] Response(${response.statusCode}) $uri');
-        debugPrint('[ApiClient] Data: ${response.data}');
-      }
+     
       return _formatResponse(response);
     } on dio.DioException catch (e) {
-      if (kDebugMode) {
-        debugPrint('[ApiClient] ERROR POST $uri');
-        debugPrint('[ApiClient] Status: ${e.response?.statusCode}');
-        debugPrint('[ApiClient] Message: ${e.message}');
-        debugPrint('[ApiClient] Error data: ${e.response?.data}');
-      }
+     
       return _formatError(e);
     }
   }

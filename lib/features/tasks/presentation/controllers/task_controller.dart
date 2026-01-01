@@ -54,10 +54,9 @@ Future<void> deleteTask(TaskModel task) async {
   final index = _allTasks.indexWhere((t) => t.id == task.id);
   if (index != -1) {
     _allTasks.removeAt(index);
-    change(_allTasks, status: RxStatus.success()); // Refresh UI
+    change(_allTasks, status: RxStatus.success()); 
   }
 
-  // 2. Repository call
   final result = await repository.deleteTask(task.id);
   
   result.fold(

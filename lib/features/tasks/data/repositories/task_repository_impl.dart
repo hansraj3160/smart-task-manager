@@ -115,14 +115,14 @@ class TaskRepositoryImpl implements TaskRepository {
   Future<void> _syncTaskStatus(String serverId, String status) async {
     try {
       if (status == 'processing') {
-        // Try Pending -> Processing (Action 1)
+        
         try {
           await remoteDataSource.updateTaskStatus(serverId, 1);
         } catch (_) {
-          // Ignore: Maybe already processing
+          
         }
       } else if (status == 'completed') {
-        // Flow: Pending -> Processing -> Completed
+        
         try {
           await remoteDataSource.updateTaskStatus(serverId, 1);
         } catch (_) {}
@@ -130,11 +130,11 @@ class TaskRepositoryImpl implements TaskRepository {
           await remoteDataSource.updateTaskStatus(serverId, 2);
         } catch (_) {}
       } else if (status == 'canceled') {
-        // FIX: Try 'Pending -> Cancel' (Action 4) FIRST
+         
         try {
           await remoteDataSource.updateTaskStatus(serverId, 4);
         } catch (e) {
-          // If fail, Try 'Processing -> Cancel' (Action 3)
+         
           try {
             await remoteDataSource.updateTaskStatus(serverId, 3);
           } catch (e2) {
@@ -224,8 +224,8 @@ class TaskRepositoryImpl implements TaskRepository {
             description: drift.Value(task.description ?? ""),
             status: drift.Value(task.status),
             isSynced: const drift.Value(true),
-            startTaskAt: drift.Value(task.startTaskAt), // Use value from model
-            // endTaskAt: drift.Value(task.endTaskAt), // Uncomment if model has this
+            startTaskAt: drift.Value(task.startTaskAt),  
+             endTaskAt: drift.Value(task.endTaskAt),  
           );
         }).toList();
 
@@ -272,12 +272,12 @@ class TaskRepositoryImpl implements TaskRepository {
       if (action == 3 || action == 4) newStatus = 'canceled';
 
       // 1. Optimistic Update (Local)
-      await localDataSource.updateLocalTaskStatus(taskId, newStatus);
+      await localDataSource.updateLocalTaskStatus(taskId, newStatus,);
 
       // 2. API Update
       if (await networkInfo.isConnected) {
         try {
-          await remoteDataSource.updateTaskStatus(taskId, action);
+          await remoteDataSource.updateTaskStatus(taskId, action,);
         } catch (e) {
           debugPrint("API Update Failed: $e");
         }
