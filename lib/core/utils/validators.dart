@@ -3,7 +3,7 @@ import 'package:get/get_utils/src/get_utils/get_utils.dart';
 class Validators {
   
   String? nameValidation(String? value){
-     if (value == null || value.isEmpty) return 'Name is required g';
+     if (value == null || value.isEmpty) return 'Name is required';
    
     return null;
   }

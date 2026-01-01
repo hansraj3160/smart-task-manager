@@ -21,16 +21,21 @@ dependencies:
   intl: ^0.20.2
   shimmer: ^3.0.0
 
+
+ 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^5.0.0
   build_runner: ^2.10.4
   drift_dev: ^2.30.0
+  mocktail: ^1.0.0
+  dartz: ^0.10.1
 
 flutter:
   uses-material-design: true
   assets:
+    - assets/logo.jpg
     - assets/fonts/
   fonts:
     - family: Poppins

@@ -28,4 +28,14 @@ class TaskModel {
           ? DateTime.parse(json['endTaskAt'])  : null, 
     );
   }
+  Map<String, dynamic> toJson() {
+  return {
+    'id': id,
+    'title': title,
+    'description': description,
+    'status': status,
+    'startTaskAt': startTaskAt?.toIso8601String(),
+    'endTaskAt': endTaskAt?.toIso8601String(),
+  };
+}
 }

@@ -17,7 +17,7 @@ final processing = 0.obs;
     fetchSummary();
   }
 
-  void fetchSummary() async {
+  Future<void> fetchSummary() async {
     isLoading.value = true;
     change(null, status: RxStatus.loading());
     

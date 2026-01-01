@@ -22,6 +22,15 @@ class LoginScreen extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                Center(
+                  child: CircleAvatar(
+                    radius: 48,
+                    backgroundImage: const AssetImage('assets/logo.jpg'),
+                    backgroundColor: Colors.transparent,
+                  ),
+                ),
+                const SizedBox(height: 16),
+
                 const Text(
                   "Welcome Back!",
                   style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
@@ -32,9 +41,9 @@ class LoginScreen extends StatelessWidget {
                 // Email Field
                 TextFormField(
                   controller: controller.emailController,
-                  decoration: const InputDecoration(
+                  decoration:  InputDecoration(
                     labelText: "Email",
-                    prefixIcon: Icon(Icons.email_outlined),
+                    prefixIcon: Icon(Icons.email_outlined, color: Theme.of(context).colorScheme.primary),
                   ),
                   validator: (value) => Validators().emailValidation(value)
                 ),
@@ -46,12 +55,12 @@ class LoginScreen extends StatelessWidget {
                   obscureText: controller.isPasswordHidden.value, 
                   decoration: InputDecoration(
                     labelText: "Password",
-                    prefixIcon: const Icon(Icons.lock_outline),
+                    prefixIcon:  Icon(Icons.lock_outline, color: Theme.of(context).colorScheme.primary),
                     suffixIcon: IconButton(
                       icon: Icon(
                         controller.isPasswordHidden.value 
                           ? Icons.visibility_off 
-                          : Icons.visibility
+                          : Icons.visibility, color: Theme.of(context).colorScheme.primary
                       ),
                       onPressed: () => controller.togglePasswordVisibility(),
                     ),
