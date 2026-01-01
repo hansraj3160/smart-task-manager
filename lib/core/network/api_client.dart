@@ -143,10 +143,15 @@ class ApiClient extends GetxService {
   }
 Future<get_pkg.Response> patchData(String uri, Map<String, dynamic> body) async {
     try {
-      final response = await _dio.patch(uri, data: body);
+     
+      final response = await _dio.patch(
+      uri,
+      data: body,
+      
+    );
       return _formatResponse(response);
     } on  dio.DioException catch (e) {
-      throw Exception(e.response?.data['message'] ?? e.message);
+    return _formatError(e);
     }
   }
   Future<get_pkg.Response> deleteData(String uri) async {

@@ -281,7 +281,7 @@ class TaskRepositoryImpl implements TaskRepository {
           await localDataSource.updateLocalTaskStatus(taskId, newStatus, isSynced: true);
           
           debugPrint("Task status updated on server & marked synced.");
-       
+      
         } catch (e) {
           debugPrint("API Update Failed: $e");
         }
