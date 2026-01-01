@@ -10,7 +10,7 @@ A **production-ready, offline-first mobile application** built with **Flutter** 
 > **Actual Time:** 36 hours
 
 **Why the extension?**
-To demonstrate a realistic **full‑stack production workflow**, I intentionally avoided mock APIs. Instead, I designed, implemented, and deployed a **custom Node.js + Express backend** on a live **AWS EC2 instance**. This ensures the application handles:
+To demonstrate a realistic **full‑stack production workflow**, I intentionally avoided mock APIs. Instead, I designed, implemented, and deployed a **custom Node.js + Express backend** and **MySQL Database** on a live **AWS EC2 instance**. This ensures the application handles:
 
 * Real network latency
 * Authentication & token rotation
