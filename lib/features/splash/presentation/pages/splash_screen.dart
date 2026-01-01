@@ -10,8 +10,8 @@ class SplashScreen extends StatelessWidget {
     // Controller inject kar rahe hain
     Get.put(SplashController()); 
 
-    return const Scaffold(
-      backgroundColor: Colors.blueAccent, // Apne theme ke hisaab se change karein
+    return  Scaffold(
+      backgroundColor: Theme.of(context).colorScheme.primary, // Apne theme ke hisaab se change karein
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
