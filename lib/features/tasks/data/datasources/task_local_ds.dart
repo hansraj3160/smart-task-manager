@@ -6,9 +6,9 @@ import 'package:path/path.dart' as p;
 
 part 'task_local_ds.g.dart';
 
-// -----------------------------------------------------------------------------
+
 // 1. Table Definition
-// -----------------------------------------------------------------------------
+
 class Tasks extends Table {
   IntColumn get id => integer().autoIncrement()(); 
   TextColumn get title => text()();
@@ -21,11 +21,10 @@ class Tasks extends Table {
   // NEW COLUMNS (Offline Support ke liye)
   TextColumn get status => text().withDefault(const Constant('pending'))();
   DateTimeColumn get startTaskAt => dateTime().nullable()();
+  DateTimeColumn get endTaskAt => dateTime().nullable()();
 }
-
-// -----------------------------------------------------------------------------
 // 2. Database Class (Drift)
-// -----------------------------------------------------------------------------
+
 @DriftDatabase(tables: [Tasks])
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
@@ -34,7 +33,7 @@ class AppDatabase extends _$AppDatabase {
   int get schemaVersion => 1;
 
   // --- Core Queries ---
-
+  
   Future<List<Task>> getAllTasks() => select(tasks).get();
 
   Future<List<Task>> getUnsyncedTasks() {
@@ -55,6 +54,7 @@ class AppDatabase extends _$AppDatabase {
   }
 
   Future<int> deleteTask(int id) => (delete(tasks)..where((t) => t.id.equals(id))).go();
+  Future<void> deleteAllTasks() => delete(tasks).go();
 }
 
 LazyDatabase _openConnection() {
@@ -65,19 +65,22 @@ LazyDatabase _openConnection() {
   });
 }
 
-// -----------------------------------------------------------------------------
+
 // 3.  NEW: Abstract Data Source (Interface)
-// -----------------------------------------------------------------------------
+
 abstract class TaskLocalDataSource {
   Future<List<Task>> getAllTasks();
   Future<int> insertTask(TasksCompanion task);
   Future<void> updateTaskSyncStatus(int localId, String serverId);
   Future<List<Task>> getUnsyncedTasks();
+  Future<void> updateLocalTaskStatus(String serverId, String newStatus);
+  Future<void> cacheTasks(List<TasksCompanion> tasks);
+  Future<void> clearAllData();
 }
 
-// -----------------------------------------------------------------------------
+
 // 4.  NEW: Implementation
-// -----------------------------------------------------------------------------
+
 class TaskLocalDataSourceImpl implements TaskLocalDataSource {
   final AppDatabase db;
 
@@ -95,4 +98,36 @@ class TaskLocalDataSourceImpl implements TaskLocalDataSource {
 
   @override
   Future<List<Task>> getUnsyncedTasks() => db.getUnsyncedTasks();
+  @override
+  Future<void> updateLocalTaskStatus(String id, String newStatus)async {
+   int? localId = int.tryParse(id);
+
+    if (localId != null) {
+     
+      final count = await (db.update(db.tasks)..where((t) => t.id.equals(localId))).write(
+        TasksCompanion(
+          status: Value(newStatus),
+          isSynced: const Value(false),
+        ),
+      );
+      
+      if (count > 0) return;
+    } 
+    await (db.update(db.tasks)..where((t) => t.serverId.equals(id))).write(
+      TasksCompanion(
+        status: Value(newStatus),
+        isSynced: const Value(false),
+      ),
+    );
+  }
+  @override
+  Future<void> cacheTasks(List<TasksCompanion> tasks) async {
+    await db.batch((batch) {
+      batch.insertAllOnConflictUpdate(db.tasks, tasks);
+    });
+  }
+  @override
+  Future<void> clearAllData() async {
+    await db.deleteAllTasks(); // Database table empty karo
+  }
 }

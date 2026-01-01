@@ -8,5 +8,6 @@ abstract class TaskRepository {
   Future<Either<Failure, TaskSummaryModel>> getTaskSummary();
   Future<Either<Failure, List<TaskModel>>> getTasks(int page, int limit);
   Future<Either<Failure, void>> createTask(Map<String, dynamic> taskData);
+  Future<void> syncPendingTasks();
 
 }

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:smart_task_manager/features/home/presentation/pages/widget/odometer_text.dart';
-import 'package:smart_task_manager/features/home/presentation/pages/widget/stat_card.dart';
+import 'package:smart_task_manager/features/home/presentation/widget/stat_card.dart';
 import '../controllers/home_controller.dart';
 
 class HomeTab extends StatelessWidget {

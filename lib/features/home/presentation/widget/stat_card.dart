@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:smart_task_manager/features/home/presentation/pages/widget/odometer_text.dart';
+import 'package:smart_task_manager/features/home/presentation/widget/odometer_text.dart';
 
 class StatCard extends StatelessWidget {
   final String title;

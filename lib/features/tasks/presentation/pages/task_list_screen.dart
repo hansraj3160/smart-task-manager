@@ -35,7 +35,9 @@ class TaskListScreen extends StatelessWidget {
                   return const _PaginationLoader();
                 }
 
-                return _AnimatedTaskCard(task: tasks[index], index: index);
+                return GestureDetector(
+                  onTap: () => controller.showStatusBottomSheet(tasks[index]),
+                  child: _AnimatedTaskCard(task: tasks[index], index: index));
               },
             ),
           ),

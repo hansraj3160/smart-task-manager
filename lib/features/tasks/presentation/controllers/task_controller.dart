@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:internet_connection_checker/internet_connection_checker.dart';
 import 'package:smart_task_manager/core/widgets/custom_snackbar.dart';
+import 'package:smart_task_manager/features/home/presentation/controllers/home_controller.dart';
 import '../../domain/repositories/task_repository.dart';
 import '../../data/models/task_model.dart';
 
@@ -22,7 +23,7 @@ class TaskController extends GetxController with StateMixin<List<TaskModel>> {
     InternetConnectionChecker.instance.onStatusChange.listen((status) {
       if (status == InternetConnectionStatus.connected) {
         debugPrint("🟢 Internet Restored: Auto Refreshing Tasks...");
-        refreshTasks(); // Net aate hi list refresh hogi
+       _performSync();
       }
     });
   
@@ -34,6 +35,11 @@ class TaskController extends GetxController with StateMixin<List<TaskModel>> {
         loadMore();
       }
     });
+  }
+  Future<void> _performSync() async {
+    await repository.syncPendingTasks();
+    refreshTasks();
+   Get.find<HomeController>().fetchSummary();
   }
 
   void _checkConnectivityAndSync() {
@@ -99,6 +105,155 @@ class TaskController extends GetxController with StateMixin<List<TaskModel>> {
       },
     );
   }
+Future<void> changeTaskStatus(TaskModel task, int action) async {
+    Get.back(); // Close Bottom Sheet
+
+
+    final repoImpl = repository as dynamic; 
+    await repoImpl.updateTaskStatus(task.id, action);
+
+    // Refresh List to show new color
+    _performSync() ;
+    
+    showSnack(message:"Task status updated successfully",type: SnackType.success);
+    
+  }
+  void showStatusBottomSheet(TaskModel task) {
+  // final isDark = Get.theme.brightness == Brightness.dark;
+
+  Get.bottomSheet(
+    Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Get.theme.colorScheme.surface,
+        borderRadius: const BorderRadius.vertical(
+          top: Radius.circular(24),
+        ),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          /// Header
+          Text(
+            "Update Status",
+            style: Get.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            task.title,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: Get.textTheme.bodySmall?.copyWith(
+              color: Get.theme.hintColor,
+            ),
+          ),
+
+          const SizedBox(height: 24),
+
+          /// ACTIONS
+          if (task.status.toLowerCase() == 'pending' ||
+              task.status.toLowerCase() == 'to_do') ...[
+            Row(
+              children: [
+                Expanded(
+                  child: _statusActionButton(
+                    label: "Start",
+                    icon: Icons.play_arrow,
+                    color: Get.theme.colorScheme.primary,
+                    onTap: () => changeTaskStatus(task, 1),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _statusActionButton(
+                    label: "Cancel",
+                    icon: Icons.close,
+                    color: Get.theme.colorScheme.error,
+                    onTap: () => changeTaskStatus(task, 4),
+                    isOutlined: true,
+                  ),
+                ),
+              ],
+            ),
+          ] else if (task.status.toLowerCase() == 'processing') ...[
+            Row(
+              children: [
+                Expanded(
+                  child: _statusActionButton(
+                    label: "Complete",
+                    icon: Icons.check,
+                    color: Colors.green,
+                    onTap: () => changeTaskStatus(task, 2),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _statusActionButton(
+                    label: "Cancel",
+                    icon: Icons.close,
+                    color: Get.theme.colorScheme.error,
+                    onTap: () => changeTaskStatus(task, 3),
+                    isOutlined: true,
+                  ),
+                ),
+              ],
+            ),
+          ] else ...[
+            Center(
+              child: Text(
+                "No actions available",
+                style: Get.textTheme.bodySmall?.copyWith(
+                  color: Get.theme.hintColor,
+                ),
+              ),
+            ),
+          ],
+
+          const SizedBox(height: 12),
+        ],
+      ),
+    ),
+  );
+}
+Widget _statusActionButton({
+  required String label,
+  required IconData icon,
+  required Color color,
+  required VoidCallback onTap,
+  bool isOutlined = false,
+}) {
+  return SizedBox(
+    height: 48,
+    child: isOutlined
+        ? OutlinedButton.icon(
+            onPressed: onTap,
+            icon: Icon(icon, size: 18),
+            label: Text(label),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: color,
+              side: BorderSide(color: color),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+              ),
+            ),
+          )
+        : ElevatedButton.icon(
+            onPressed: onTap,
+            icon: Icon(icon, size: 18),
+            label: Text(label),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: color,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+              ),
+            ),
+          ),
+  );
+}
 
   @override
   void onClose() {

@@ -13,6 +13,8 @@ abstract class TaskRemoteDataSource {
   Future<List<TaskModel>> getTasks(int page, int limit);
   // Future<void> createTask(Map<String, dynamic> taskData);
   Future<String> createTask(Map<String, dynamic> taskData);
+  Future<void> updateTaskStatus(String taskId, int action);
+
 }
 
 class TaskRemoteDataSourceImpl implements TaskRemoteDataSource {
@@ -66,6 +68,23 @@ class TaskRemoteDataSourceImpl implements TaskRemoteDataSource {
       if (response.statusCode == 200 || response.statusCode == 201) {
         debugPrint("Task created: ${response.body['task']['id']}");
       return response.body['task']['id'];
+      } else {
+        throw Exception(response.statusText);
+      }
+    } catch (e) {
+      rethrow;
+    }
+  }
+  @override
+  Future<void> updateTaskStatus(String taskId, int action) async {
+    try {
+      // URL: /tasks/:id/status/:action
+      final url = "${AppConstants.tasksUri}/$taskId/status/$action";
+      
+      final response = await apiClient.patchData(url, {}); // Body empty hai
+
+      if (response.statusCode == 200) {
+        return;
       } else {
         throw Exception(response.statusText);
       }
