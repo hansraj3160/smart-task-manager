@@ -3,7 +3,7 @@ import 'package:get/get.dart';
 import 'config/routes.dart';  
 import 'injector_container.dart' as di;  
 import 'config/theme.dart';
-void main() async {
+Future<void> main() async {
  
   WidgetsFlutterBinding.ensureInitialized();
  
