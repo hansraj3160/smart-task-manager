@@ -59,16 +59,19 @@ class TaskRepositoryImpl implements TaskRepository {
         for (var task in pendingTasks) {
           try {
             if (task.isDeleted == true) {
+                debugPrint(" Syncing DELETE for: ${task.title}");
               if (task.serverId != null) {
                 try {
-                  debugPrint(" Syncing DELETE for: ${task.title}");
+                
                   await remoteDataSource.deleteTask(task.serverId!);
                   await localDataSource.deleteTaskPermanently(task.id);
+                  debugPrint("Deleted from Server & Local");
                 } catch (e) {
                   debugPrint("Delete Sync Failed: $e");
                 }
               } else {
                 await localDataSource.deleteTaskPermanently(task.id);
+                debugPrint("Deleted Local-only task");
               }
             } else if (task.serverId == null) {
               final Map<String, dynamic> taskData = {
@@ -102,7 +105,7 @@ class TaskRepositoryImpl implements TaskRepository {
               );
             }
           } catch (e) {
-            debugPrint("❌ Failed to sync task '${task.title}': $e");
+            debugPrint("Failed to sync task '${task.title}': $e");
           }
         }
       } catch (e) {
@@ -205,17 +208,14 @@ class TaskRepositoryImpl implements TaskRepository {
     }
   }
 
-  // GET TASKS (With Caching)
-
   @override
   Future<Either<Failure, List<TaskModel>>> getTasks(int page, int limit) async {
     final userId = await _getUserId();
-    // 1. Online -> Fetch & Cache
+   
     if (await networkInfo.isConnected) {
       try {
         final remoteTasks = await remoteDataSource.getTasks(page, limit);
 
-        // Cache Data Logic
         final tasksToCache = remoteTasks.map((task) {
           return TasksCompanion(
             userId: drift.Value(userId),
@@ -235,7 +235,7 @@ class TaskRepositoryImpl implements TaskRepository {
         return Left(ServerFailure(e.toString()));
       }
     }
-    // 2. Offline -> Fetch Local
+   
     else {
       try {
         final localTasks = await localDataSource.getAllTasks(userId);
@@ -272,12 +272,16 @@ class TaskRepositoryImpl implements TaskRepository {
       if (action == 3 || action == 4) newStatus = 'canceled';
 
       // 1. Optimistic Update (Local)
-      await localDataSource.updateLocalTaskStatus(taskId, newStatus,);
+      await localDataSource.updateLocalTaskStatus(taskId, newStatus, isSynced: false);
 
       // 2. API Update
       if (await networkInfo.isConnected) {
         try {
-          await remoteDataSource.updateTaskStatus(taskId, action,);
+          await remoteDataSource.updateTaskStatus(taskId, action);
+          await localDataSource.updateLocalTaskStatus(taskId, newStatus, isSynced: true);
+          
+          debugPrint("Task status updated on server & marked synced.");
+       
         } catch (e) {
           debugPrint("API Update Failed: $e");
         }

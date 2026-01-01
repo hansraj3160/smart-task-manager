@@ -3,19 +3,17 @@ import 'package:flutter/material.dart';
 import 'package:smart_task_manager/core/utils/app_constants.dart';
 import 'package:smart_task_manager/features/tasks/data/models/task_model.dart';
 
+import '../../../../core/error/exceptions.dart';
 import '../../../../core/network/api_client.dart';
 import '../../../home/data/models/task_summary_model.dart';
 
-
 abstract class TaskRemoteDataSource {
-
   Future<TaskSummaryModel> getTaskSummary();
   Future<List<TaskModel>> getTasks(int page, int limit);
-  // Future<void> createTask(Map<String, dynamic> taskData);
+  
   Future<String> createTask(Map<String, dynamic> taskData);
   Future<void> updateTaskStatus(String taskId, int action);
   Future<void> deleteTask(String id);
-
 }
 
 class TaskRemoteDataSourceImpl implements TaskRemoteDataSource {
@@ -25,7 +23,7 @@ class TaskRemoteDataSourceImpl implements TaskRemoteDataSource {
   Future<TaskSummaryModel> getTaskSummary() async {
     try {
       final response = await apiClient.getData(AppConstants.taskSummaryUri);
-      
+
       if (response.statusCode == 200) {
         return TaskSummaryModel.fromJson(response.body);
       } else {
@@ -35,25 +33,26 @@ class TaskRemoteDataSourceImpl implements TaskRemoteDataSource {
       rethrow;
     }
   }
-  @override
-Future<void> deleteTask(String id) async {
 
-  await apiClient.deleteData('/tasks/$id');
-}
+  @override
+  Future<void> deleteTask(String serverId) async {
+    final response = await apiClient.deleteData('/tasks/$serverId');
+
+    if (response.statusCode != 200 && response.statusCode != 204) {
+      throw ServerException(message: "Failed to connect");
+    }
+  }
+
   @override
   Future<List<TaskModel>> getTasks(int page, int limit) async {
     try {
       final response = await apiClient.getData(
         AppConstants.tasksUri,
-        query: {
-          'page': page, 
-          'limit': limit
-        },
+        query: {'page': page, 'limit': limit},
       );
 
       if (response.statusCode == 200) {
-        
-        final List<dynamic> data = response.body['data'];  
+        final List<dynamic> data = response.body['data'];
         return data.map((json) => TaskModel.fromJson(json)).toList();
       } else {
         throw Exception(response.statusText);
@@ -67,13 +66,13 @@ Future<void> deleteTask(String id) async {
   Future<String> createTask(Map<String, dynamic> taskData) async {
     try {
       final response = await apiClient.postData(
-        AppConstants.tasksUri, 
-        taskData,  
+        AppConstants.tasksUri,
+        taskData,
       );
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         debugPrint("Task created: ${response.body['task']['id']}");
-      return response.body['task']['id'];
+        return response.body['task']['id'];
       } else {
         throw Exception(response.statusText);
       }
@@ -81,13 +80,13 @@ Future<void> deleteTask(String id) async {
       rethrow;
     }
   }
+
   @override
   Future<void> updateTaskStatus(String taskId, int action) async {
     try {
-  
       final url = "${AppConstants.tasksUri}/$taskId/status/$action";
-      
-      final response = await apiClient.patchData(url, {}); 
+
+      final response = await apiClient.patchData(url, {});
 
       if (response.statusCode == 200) {
         return;

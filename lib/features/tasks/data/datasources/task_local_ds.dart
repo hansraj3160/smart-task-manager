@@ -15,16 +15,14 @@ class Tasks extends Table {
   TextColumn get description => text()();
   BoolColumn get isCompleted => boolean().withDefault(const Constant(false))();
   IntColumn get userId => integer().nullable()();
-  // Sync Logic 
   BoolColumn get isSynced => boolean().withDefault(const Constant(true))(); 
   TextColumn get serverId => text().nullable()();
-  // NEW COLUMNS (Offline Support ke liye)
   TextColumn get status => text().withDefault(const Constant('pending'))();
   DateTimeColumn get startTaskAt => dateTime().nullable()();
   DateTimeColumn get endTaskAt => dateTime().nullable()();
   BoolColumn get isDeleted => boolean().withDefault(const Constant(false))();
+  
 }
-// 2. Database Class (Drift)
 
 @DriftDatabase(tables: [Tasks])
 class AppDatabase extends _$AppDatabase {
@@ -35,21 +33,14 @@ int get schemaVersion => 3;
 
   // --- Core Queries ---
  @override
-  MigrationStrategy get migration {
-    return MigrationStrategy(
-      onCreate: (Migrator m) async {
-        await m.createAll();
-      },
-      onUpgrade: (Migrator m, int from, int to) async {
-        if (from < 2) {
-           await m.addColumn(tasks, tasks.userId);
-        }
-        // STEP: Add Migration for Version 3
-        if (from < 3) {
-          await m.addColumn(tasks, tasks.isDeleted);
-        }
-      },
-    );
+MigrationStrategy get migration {
+  return MigrationStrategy(
+    onUpgrade: (Migrator m, int from, int to) async {
+      if (from < 3) { // Assuming you are bumping to version 3
+        await m.addColumn(tasks, tasks.isDeleted);
+      }
+    },
+  );
 }
 
   Future<List<Task>> getAllTasks(int userId) {
@@ -57,12 +48,12 @@ int get schemaVersion => 3;
       t.userId.equals(userId) & t.isDeleted.equals(false)
     )).get();
   }
-  
- Future<List<Task>> getUnsyncedTasks(int userId) {
-    return (select(tasks)
-      ..where((t) => t.isSynced.equals(false) & t.userId.equals(userId)))
-      .get();
-  }
+ 
+Future<List<Task>> getUnsyncedTasks(int userId) {
+  return (select(tasks)
+    ..where((t) => t.isSynced.equals(false) & t.userId.equals(userId))
+  ).get();
+}
  Future<int> insertTask(TasksCompanion task) {
     return into(tasks).insert(task);
   }
@@ -77,13 +68,11 @@ int get schemaVersion => 3;
 Future<void> markTaskAsDeleted(String id) async{
    int? localId = int.tryParse(id);
     if (localId != null) {
-      // Try by Local ID
       final count = await (update(tasks)..where((t) => t.id.equals(localId))).write(
         TasksCompanion(isDeleted: const Value(true), isSynced: const Value(false))
       );
       if (count > 0) return;
     }
-    // Try by Server ID
     await (update(tasks)..where((t) => t.serverId.equals(id))).write(
       TasksCompanion(isDeleted: const Value(true), isSynced: const Value(false))
     );
@@ -113,7 +102,7 @@ abstract class TaskLocalDataSource {
   Future<int> insertTask(TasksCompanion task);
   Future<void> updateTaskSyncStatus(int localId, String serverId);
  Future<List<Task>> getUnsyncedTasks(int userId);
-  Future<void> updateLocalTaskStatus(String serverId, String newStatus);
+  Future<void> updateLocalTaskStatus(String serverId, String newStatus, {bool isSynced = false});
   Future<void> cacheTasks(List<TasksCompanion> tasks);
   Future<void> markTaskAsDeleted(String id);
   Future<void> deleteTaskPermanently(int id);
@@ -143,7 +132,7 @@ class TaskLocalDataSourceImpl implements TaskLocalDataSource {
 
  @override
   Future<List<Task>> getUnsyncedTasks(int userId) => db.getUnsyncedTasks(userId);@override
-  Future<void> updateLocalTaskStatus(String id, String newStatus)async {
+  Future<void> updateLocalTaskStatus(String id, String newStatus,{bool isSynced = false})async {
    int? localId = int.tryParse(id);
 
     if (localId != null) {
@@ -151,7 +140,7 @@ class TaskLocalDataSourceImpl implements TaskLocalDataSource {
       final count = await (db.update(db.tasks)..where((t) => t.id.equals(localId))).write(
         TasksCompanion(
           status: Value(newStatus),
-          isSynced: const Value(false),
+          isSynced:   Value(isSynced),
         ),
       );
       
