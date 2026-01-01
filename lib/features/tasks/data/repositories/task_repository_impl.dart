@@ -25,18 +25,21 @@ class TaskRepositoryImpl implements TaskRepository {
     required this.networkInfo,
   });
 
-  // ---------------------------------------------------------------------------
+Future<int> _getUserId() async {
+    String? userIdStr = await _storage.read(key: 'user_id');
+    return userIdStr != null ? int.parse(userIdStr) : 0;
+  }
   //  SYNC PENDING TASKS (Background Sync)
-  // ---------------------------------------------------------------------------
+
 @override
   Future<void> syncPendingTasks() async {
     if (await networkInfo.isConnected) {
       try {
-        final pendingTasks = await localDataSource.getUnsyncedTasks();
+        final userId = await _getUserId();
+     final pendingTasks = await localDataSource.getUnsyncedTasks(userId);
         if (pendingTasks.isEmpty) return;
-
-        String? userIdStr = await _storage.read(key: 'user_id');
-        int userId = userIdStr != null ? int.parse(userIdStr) : 19;
+ 
+       
 
         for (var task in pendingTasks) {
           try {
@@ -123,6 +126,7 @@ class TaskRepositoryImpl implements TaskRepository {
   Future<Either<Failure, void>> createTask(Map<String, dynamic> taskData) async {
     try {
       // Parse Dates for Local DB
+      final userId = await _getUserId();
       DateTime? startAt;
       if (taskData['startDate'] != null && taskData['startTime'] != null) {
         try {
@@ -139,6 +143,7 @@ class TaskRepositoryImpl implements TaskRepository {
       // 1. Save to Local DB (Offline First)
       final localId = await localDataSource.insertTask(
         TasksCompanion(
+          userId: drift.Value(userId),
           title: drift.Value(taskData['title']),
           description: drift.Value(taskData['description']),
           isCompleted: const drift.Value(false),
@@ -167,11 +172,12 @@ class TaskRepositoryImpl implements TaskRepository {
     }
   }
 
-  // ---------------------------------------------------------------------------
+   
   // GET TASKS (With Caching)
-  // ---------------------------------------------------------------------------
+   
   @override
   Future<Either<Failure, List<TaskModel>>> getTasks(int page, int limit) async {
+    final userId = await _getUserId();
     // 1. Online -> Fetch & Cache
     if (await networkInfo.isConnected) {
       try {
@@ -180,6 +186,7 @@ class TaskRepositoryImpl implements TaskRepository {
         // Cache Data Logic
         final tasksToCache = remoteTasks.map((task) {
           return TasksCompanion(
+            userId: drift.Value(userId),
             serverId: drift.Value(task.id),
             title: drift.Value(task.title),
             description: drift.Value(task.description ?? ""),
@@ -199,7 +206,7 @@ class TaskRepositoryImpl implements TaskRepository {
     // 2. Offline -> Fetch Local
     else {
       try {
-        final localTasks = await localDataSource.getAllTasks();
+      final localTasks = await localDataSource.getAllTasks(userId);
 
         final tasks = localTasks.map((t) => TaskModel(
           id: t.serverId ?? t.id.toString(),

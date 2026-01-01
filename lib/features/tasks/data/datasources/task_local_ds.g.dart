@@ -56,6 +56,15 @@ class $TasksTable extends Tasks with TableInfo<$TasksTable, Task> {
     ),
     defaultValue: const Constant(false),
   );
+  static const VerificationMeta _userIdMeta = const VerificationMeta('userId');
+  @override
+  late final GeneratedColumn<int> userId = GeneratedColumn<int>(
+    'user_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _isSyncedMeta = const VerificationMeta(
     'isSynced',
   );
@@ -120,6 +129,7 @@ class $TasksTable extends Tasks with TableInfo<$TasksTable, Task> {
     title,
     description,
     isCompleted,
+    userId,
     isSynced,
     serverId,
     status,
@@ -167,6 +177,12 @@ class $TasksTable extends Tasks with TableInfo<$TasksTable, Task> {
           data['is_completed']!,
           _isCompletedMeta,
         ),
+      );
+    }
+    if (data.containsKey('user_id')) {
+      context.handle(
+        _userIdMeta,
+        userId.isAcceptableOrUnknown(data['user_id']!, _userIdMeta),
       );
     }
     if (data.containsKey('is_synced')) {
@@ -227,6 +243,10 @@ class $TasksTable extends Tasks with TableInfo<$TasksTable, Task> {
         DriftSqlType.bool,
         data['${effectivePrefix}is_completed'],
       )!,
+      userId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}user_id'],
+      ),
       isSynced: attachedDatabase.typeMapping.read(
         DriftSqlType.bool,
         data['${effectivePrefix}is_synced'],
@@ -261,6 +281,7 @@ class Task extends DataClass implements Insertable<Task> {
   final String title;
   final String description;
   final bool isCompleted;
+  final int? userId;
   final bool isSynced;
   final String? serverId;
   final String status;
@@ -271,6 +292,7 @@ class Task extends DataClass implements Insertable<Task> {
     required this.title,
     required this.description,
     required this.isCompleted,
+    this.userId,
     required this.isSynced,
     this.serverId,
     required this.status,
@@ -284,6 +306,9 @@ class Task extends DataClass implements Insertable<Task> {
     map['title'] = Variable<String>(title);
     map['description'] = Variable<String>(description);
     map['is_completed'] = Variable<bool>(isCompleted);
+    if (!nullToAbsent || userId != null) {
+      map['user_id'] = Variable<int>(userId);
+    }
     map['is_synced'] = Variable<bool>(isSynced);
     if (!nullToAbsent || serverId != null) {
       map['server_id'] = Variable<String>(serverId);
@@ -304,6 +329,9 @@ class Task extends DataClass implements Insertable<Task> {
       title: Value(title),
       description: Value(description),
       isCompleted: Value(isCompleted),
+      userId: userId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(userId),
       isSynced: Value(isSynced),
       serverId: serverId == null && nullToAbsent
           ? const Value.absent()
@@ -328,6 +356,7 @@ class Task extends DataClass implements Insertable<Task> {
       title: serializer.fromJson<String>(json['title']),
       description: serializer.fromJson<String>(json['description']),
       isCompleted: serializer.fromJson<bool>(json['isCompleted']),
+      userId: serializer.fromJson<int?>(json['userId']),
       isSynced: serializer.fromJson<bool>(json['isSynced']),
       serverId: serializer.fromJson<String?>(json['serverId']),
       status: serializer.fromJson<String>(json['status']),
@@ -343,6 +372,7 @@ class Task extends DataClass implements Insertable<Task> {
       'title': serializer.toJson<String>(title),
       'description': serializer.toJson<String>(description),
       'isCompleted': serializer.toJson<bool>(isCompleted),
+      'userId': serializer.toJson<int?>(userId),
       'isSynced': serializer.toJson<bool>(isSynced),
       'serverId': serializer.toJson<String?>(serverId),
       'status': serializer.toJson<String>(status),
@@ -356,6 +386,7 @@ class Task extends DataClass implements Insertable<Task> {
     String? title,
     String? description,
     bool? isCompleted,
+    Value<int?> userId = const Value.absent(),
     bool? isSynced,
     Value<String?> serverId = const Value.absent(),
     String? status,
@@ -366,6 +397,7 @@ class Task extends DataClass implements Insertable<Task> {
     title: title ?? this.title,
     description: description ?? this.description,
     isCompleted: isCompleted ?? this.isCompleted,
+    userId: userId.present ? userId.value : this.userId,
     isSynced: isSynced ?? this.isSynced,
     serverId: serverId.present ? serverId.value : this.serverId,
     status: status ?? this.status,
@@ -382,6 +414,7 @@ class Task extends DataClass implements Insertable<Task> {
       isCompleted: data.isCompleted.present
           ? data.isCompleted.value
           : this.isCompleted,
+      userId: data.userId.present ? data.userId.value : this.userId,
       isSynced: data.isSynced.present ? data.isSynced.value : this.isSynced,
       serverId: data.serverId.present ? data.serverId.value : this.serverId,
       status: data.status.present ? data.status.value : this.status,
@@ -399,6 +432,7 @@ class Task extends DataClass implements Insertable<Task> {
           ..write('title: $title, ')
           ..write('description: $description, ')
           ..write('isCompleted: $isCompleted, ')
+          ..write('userId: $userId, ')
           ..write('isSynced: $isSynced, ')
           ..write('serverId: $serverId, ')
           ..write('status: $status, ')
@@ -414,6 +448,7 @@ class Task extends DataClass implements Insertable<Task> {
     title,
     description,
     isCompleted,
+    userId,
     isSynced,
     serverId,
     status,
@@ -428,6 +463,7 @@ class Task extends DataClass implements Insertable<Task> {
           other.title == this.title &&
           other.description == this.description &&
           other.isCompleted == this.isCompleted &&
+          other.userId == this.userId &&
           other.isSynced == this.isSynced &&
           other.serverId == this.serverId &&
           other.status == this.status &&
@@ -440,6 +476,7 @@ class TasksCompanion extends UpdateCompanion<Task> {
   final Value<String> title;
   final Value<String> description;
   final Value<bool> isCompleted;
+  final Value<int?> userId;
   final Value<bool> isSynced;
   final Value<String?> serverId;
   final Value<String> status;
@@ -450,6 +487,7 @@ class TasksCompanion extends UpdateCompanion<Task> {
     this.title = const Value.absent(),
     this.description = const Value.absent(),
     this.isCompleted = const Value.absent(),
+    this.userId = const Value.absent(),
     this.isSynced = const Value.absent(),
     this.serverId = const Value.absent(),
     this.status = const Value.absent(),
@@ -461,6 +499,7 @@ class TasksCompanion extends UpdateCompanion<Task> {
     required String title,
     required String description,
     this.isCompleted = const Value.absent(),
+    this.userId = const Value.absent(),
     this.isSynced = const Value.absent(),
     this.serverId = const Value.absent(),
     this.status = const Value.absent(),
@@ -473,6 +512,7 @@ class TasksCompanion extends UpdateCompanion<Task> {
     Expression<String>? title,
     Expression<String>? description,
     Expression<bool>? isCompleted,
+    Expression<int>? userId,
     Expression<bool>? isSynced,
     Expression<String>? serverId,
     Expression<String>? status,
@@ -484,6 +524,7 @@ class TasksCompanion extends UpdateCompanion<Task> {
       if (title != null) 'title': title,
       if (description != null) 'description': description,
       if (isCompleted != null) 'is_completed': isCompleted,
+      if (userId != null) 'user_id': userId,
       if (isSynced != null) 'is_synced': isSynced,
       if (serverId != null) 'server_id': serverId,
       if (status != null) 'status': status,
@@ -497,6 +538,7 @@ class TasksCompanion extends UpdateCompanion<Task> {
     Value<String>? title,
     Value<String>? description,
     Value<bool>? isCompleted,
+    Value<int?>? userId,
     Value<bool>? isSynced,
     Value<String?>? serverId,
     Value<String>? status,
@@ -508,6 +550,7 @@ class TasksCompanion extends UpdateCompanion<Task> {
       title: title ?? this.title,
       description: description ?? this.description,
       isCompleted: isCompleted ?? this.isCompleted,
+      userId: userId ?? this.userId,
       isSynced: isSynced ?? this.isSynced,
       serverId: serverId ?? this.serverId,
       status: status ?? this.status,
@@ -530,6 +573,9 @@ class TasksCompanion extends UpdateCompanion<Task> {
     }
     if (isCompleted.present) {
       map['is_completed'] = Variable<bool>(isCompleted.value);
+    }
+    if (userId.present) {
+      map['user_id'] = Variable<int>(userId.value);
     }
     if (isSynced.present) {
       map['is_synced'] = Variable<bool>(isSynced.value);
@@ -556,6 +602,7 @@ class TasksCompanion extends UpdateCompanion<Task> {
           ..write('title: $title, ')
           ..write('description: $description, ')
           ..write('isCompleted: $isCompleted, ')
+          ..write('userId: $userId, ')
           ..write('isSynced: $isSynced, ')
           ..write('serverId: $serverId, ')
           ..write('status: $status, ')
@@ -583,6 +630,7 @@ typedef $$TasksTableCreateCompanionBuilder =
       required String title,
       required String description,
       Value<bool> isCompleted,
+      Value<int?> userId,
       Value<bool> isSynced,
       Value<String?> serverId,
       Value<String> status,
@@ -595,6 +643,7 @@ typedef $$TasksTableUpdateCompanionBuilder =
       Value<String> title,
       Value<String> description,
       Value<bool> isCompleted,
+      Value<int?> userId,
       Value<bool> isSynced,
       Value<String?> serverId,
       Value<String> status,
@@ -627,6 +676,11 @@ class $$TasksTableFilterComposer extends Composer<_$AppDatabase, $TasksTable> {
 
   ColumnFilters<bool> get isCompleted => $composableBuilder(
     column: $table.isCompleted,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get userId => $composableBuilder(
+    column: $table.userId,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -685,6 +739,11 @@ class $$TasksTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get userId => $composableBuilder(
+    column: $table.userId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<bool> get isSynced => $composableBuilder(
     column: $table.isSynced,
     builder: (column) => ColumnOrderings(column),
@@ -736,6 +795,9 @@ class $$TasksTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<int> get userId =>
+      $composableBuilder(column: $table.userId, builder: (column) => column);
+
   GeneratedColumn<bool> get isSynced =>
       $composableBuilder(column: $table.isSynced, builder: (column) => column);
 
@@ -786,6 +848,7 @@ class $$TasksTableTableManager
                 Value<String> title = const Value.absent(),
                 Value<String> description = const Value.absent(),
                 Value<bool> isCompleted = const Value.absent(),
+                Value<int?> userId = const Value.absent(),
                 Value<bool> isSynced = const Value.absent(),
                 Value<String?> serverId = const Value.absent(),
                 Value<String> status = const Value.absent(),
@@ -796,6 +859,7 @@ class $$TasksTableTableManager
                 title: title,
                 description: description,
                 isCompleted: isCompleted,
+                userId: userId,
                 isSynced: isSynced,
                 serverId: serverId,
                 status: status,
@@ -808,6 +872,7 @@ class $$TasksTableTableManager
                 required String title,
                 required String description,
                 Value<bool> isCompleted = const Value.absent(),
+                Value<int?> userId = const Value.absent(),
                 Value<bool> isSynced = const Value.absent(),
                 Value<String?> serverId = const Value.absent(),
                 Value<String> status = const Value.absent(),
@@ -818,6 +883,7 @@ class $$TasksTableTableManager
                 title: title,
                 description: description,
                 isCompleted: isCompleted,
+                userId: userId,
                 isSynced: isSynced,
                 serverId: serverId,
                 status: status,

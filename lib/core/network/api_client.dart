@@ -20,7 +20,7 @@ class ApiClient extends GetxService {
   }
 
   void _initDio() async {
-    // 1. Initial Setup
+  
     token = await _storage.read(key: AppConstants.token);
     
     _dio = dio.Dio(
@@ -30,30 +30,32 @@ class ApiClient extends GetxService {
         receiveTimeout: const Duration(seconds: 30),
         headers: {
           'Content-Type': 'application/json; charset=UTF-8',
-          'Authorization': 'Bearer $token',
+        
         },
       ),
     );
 
-    // 2. Add Interceptor (The Magic Part)
+ 
     _dio.interceptors.add(
       dio.QueuedInterceptorsWrapper(
-        onRequest: (options, handler) {
-          if (token != null) {
-            options.headers['Authorization'] = 'Bearer $token';
+        onRequest: (options, handler)async {
+         String? currentToken = await _storage.read(key: AppConstants.token);
+          
+          if (currentToken != null) {
+            options.headers['Authorization'] = 'Bearer $currentToken';
           }
           return handler.next(options);
         },
         onError: (dio.DioException error, handler) async {
-          // 3. Agar 401 aaya, toh ruk jao
+     
           if (error.response?.statusCode == 401) {
             try {
-           // 1. Refresh Token nikalo
+        
               debugPrint('Access token expired. Attempting to refresh token...');
               String? storedRefreshToken = await _storage.read(key: AppConstants.refreshToken);
               
               if (storedRefreshToken == null) {
-                return handler.next(error); // Logout if no refresh token
+                return handler.next(error); 
               }
 
               
@@ -100,7 +102,7 @@ class ApiClient extends GetxService {
     );
   }
 
-  // --- Helper Methods ---
+ 
 
   Future<void> _performLogout() async {
     await _storage.deleteAll();
@@ -111,6 +113,7 @@ class ApiClient extends GetxService {
 
   Future<get_pkg.Response> getData(String uri, {Map<String, dynamic>? query}) async {
     try {
+      debugPrint("query prams $token");
       var response = await _dio.get(uri, queryParameters: query);
       return _formatResponse(response);
     } on dio.DioException catch (e) {

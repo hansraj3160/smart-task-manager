@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:internet_connection_checker/internet_connection_checker.dart';
@@ -15,17 +17,21 @@ class TaskController extends GetxController with StateMixin<List<TaskModel>> {
   var isMoreLoading = false.obs;
   var hasMore = true.obs;
   final List<TaskModel> _allTasks = [];
+  Timer? _debounceTimer;
   @override
   void onInit() {
     super.onInit();
     fetchInitialTasks();
     _checkConnectivityAndSync();
     InternetConnectionChecker.instance.onStatusChange.listen((status) {
+      if (_debounceTimer?.isActive ?? false) _debounceTimer!.cancel();
+      _debounceTimer = Timer(const Duration(seconds: 2), () {
       if (status == InternetConnectionStatus.connected) {
         debugPrint("🟢 Internet Restored: Auto Refreshing Tasks...");
        _performSync();
       }
-    });
+      });});
+  
   
     scrollController.addListener(() {
       if (scrollController.position.pixels >=

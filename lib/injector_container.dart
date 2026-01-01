@@ -12,7 +12,7 @@ import 'features/tasks/data/datasources/task_local_ds.dart';
 
 Future<void> init() async {
   // 1. External Dependencies
-  Get.lazyPut(() => const FlutterSecureStorage(), fenix: true);
+ Get.lazyPut(() => const FlutterSecureStorage(), fenix: true);
   Get.lazyPut(() => InternetConnectionChecker.instance, fenix: true);
 
   // 2. Core Features
@@ -25,9 +25,11 @@ Future<void> init() async {
     () => ApiClient(appBaseUrl: AppConstants.baseUrl), 
     fenix: true
   );
+  
 
   // 3. Database (Drift)
-  Get.lazyPut(() => AppDatabase(), fenix: true);
+ final database = AppDatabase();
+  Get.put<AppDatabase>(database, permanent: true);
   //Register TaskLocalDataSource
   Get.lazyPut<TaskLocalDataSource>(
     () => TaskLocalDataSourceImpl(Get.find()),  

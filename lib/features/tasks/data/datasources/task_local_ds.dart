@@ -14,7 +14,7 @@ class Tasks extends Table {
   TextColumn get title => text()();
   TextColumn get description => text()();
   BoolColumn get isCompleted => boolean().withDefault(const Constant(false))();
-  
+  IntColumn get userId => integer().nullable()();
   // Sync Logic 
   BoolColumn get isSynced => boolean().withDefault(const Constant(true))(); 
   TextColumn get serverId => text().nullable()();
@@ -30,20 +30,35 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
 
   // --- Core Queries ---
-  
-  Future<List<Task>> getAllTasks() => select(tasks).get();
-
-  Future<List<Task>> getUnsyncedTasks() {
-    return (select(tasks)..where((t) => t.isSynced.equals(false))).get();
+ @override
+MigrationStrategy get migration {
+  return MigrationStrategy(
+    onCreate: (Migrator m) async {
+      await m.createAll();
+    },
+    onUpgrade: (Migrator m, int from, int to) async {
+      if (from < 2) { 
+        // YOU MUST ADD THIS LINE:
+        // 'tasks' is your table class, 'userId' is the column field in that class
+        await m.addColumn(tasks, tasks.userId); 
+      }
+    },
+  );
+}
+  Future<List<Task>> getAllTasks(int userId) {
+    return (select(tasks)..where((t) => t.userId.equals(userId))).get();
   }
-  
-  Future<int> insertTask(TasksCompanion task) {
+ Future<List<Task>> getUnsyncedTasks(int userId) {
+    return (select(tasks)
+      ..where((t) => t.isSynced.equals(false) & t.userId.equals(userId)))
+      .get();
+  }
+ Future<int> insertTask(TasksCompanion task) {
     return into(tasks).insert(task);
   }
-  
   Future<void> markAsSynced(int localId, String remoteId) {
     return (update(tasks)..where((t) => t.id.equals(localId))).write(
       TasksCompanion(
@@ -53,8 +68,9 @@ class AppDatabase extends _$AppDatabase {
     );
   }
 
-  Future<int> deleteTask(int id) => (delete(tasks)..where((t) => t.id.equals(id))).go();
   Future<void> deleteAllTasks() => delete(tasks).go();
+  Future<int> deleteTask(int id) => (delete(tasks)..where((t) => t.id.equals(id))).go();
+  
 }
 
 LazyDatabase _openConnection() {
@@ -69,10 +85,10 @@ LazyDatabase _openConnection() {
 // 3.  NEW: Abstract Data Source (Interface)
 
 abstract class TaskLocalDataSource {
-  Future<List<Task>> getAllTasks();
+  Future<List<Task>> getAllTasks(int userId);
   Future<int> insertTask(TasksCompanion task);
   Future<void> updateTaskSyncStatus(int localId, String serverId);
-  Future<List<Task>> getUnsyncedTasks();
+ Future<List<Task>> getUnsyncedTasks(int userId);
   Future<void> updateLocalTaskStatus(String serverId, String newStatus);
   Future<void> cacheTasks(List<TasksCompanion> tasks);
   Future<void> clearAllData();
@@ -86,9 +102,8 @@ class TaskLocalDataSourceImpl implements TaskLocalDataSource {
 
   TaskLocalDataSourceImpl(this.db);
 
-  @override
-  Future<List<Task>> getAllTasks() => db.getAllTasks();
-
+ @override
+  Future<List<Task>> getAllTasks(int userId) => db.getAllTasks(userId);
   @override
   Future<int> insertTask(TasksCompanion task) => db.insertTask(task);
 
@@ -96,9 +111,8 @@ class TaskLocalDataSourceImpl implements TaskLocalDataSource {
   Future<void> updateTaskSyncStatus(int localId, String serverId) => 
       db.markAsSynced(localId, serverId);
 
-  @override
-  Future<List<Task>> getUnsyncedTasks() => db.getUnsyncedTasks();
-  @override
+ @override
+  Future<List<Task>> getUnsyncedTasks(int userId) => db.getUnsyncedTasks(userId);@override
   Future<void> updateLocalTaskStatus(String id, String newStatus)async {
    int? localId = int.tryParse(id);
 
@@ -120,10 +134,24 @@ class TaskLocalDataSourceImpl implements TaskLocalDataSource {
       ),
     );
   }
-  @override
+@override
   Future<void> cacheTasks(List<TasksCompanion> tasks) async {
-    await db.batch((batch) {
-      batch.insertAllOnConflictUpdate(db.tasks, tasks);
+    await db.transaction(() async {
+      for (var task in tasks) {
+        final serverId = task.serverId.value;
+        if (serverId != null) {
+         
+          final exists = await (db.select(db.tasks)..where((t) => t.serverId.equals(serverId))).getSingleOrNull();
+          
+          if (exists != null) {
+            
+            await (db.update(db.tasks)..where((t) => t.id.equals(exists.id))).write(task);
+          } else {
+           
+            await db.into(db.tasks).insert(task);
+          }
+        }
+      }
     });
   }
   @override

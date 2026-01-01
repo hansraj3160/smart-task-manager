@@ -13,8 +13,8 @@ class AuthController extends GetxController {
   final GlobalKey<FormState> loginFormKey = GlobalKey<FormState>();
   final GlobalKey<FormState> signupFormKey = GlobalKey<FormState>();
 
-  final emailController = TextEditingController(text: 'rajh8157@gmail.com');
-  final passwordController = TextEditingController(text: 'password123');
+  final emailController = TextEditingController();
+  final passwordController = TextEditingController();
   
 
   final nameController = TextEditingController();
@@ -28,7 +28,10 @@ class AuthController extends GetxController {
   }
 
   Future<void> login() async {
-
+    await _storage.delete(key:AppConstants.refreshToken);
+    await _storage.delete(key:  AppConstants.token);
+    await _storage.deleteAll();
+    debugPrint("local data delete ${await _storage.read(key: AppConstants.token.toString() )}");
     if (!loginFormKey.currentState!.validate()) {
       return; 
     }
@@ -39,7 +42,7 @@ class AuthController extends GetxController {
         emailController.text.trim(), 
         passwordController.text.trim()
       );
-   
+    
       String accessToken = data['token'];
       String refreshToken = data['refreshToken'];
       var user = data['user'];
