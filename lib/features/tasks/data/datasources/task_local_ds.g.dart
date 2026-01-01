@@ -123,6 +123,21 @@ class $TasksTable extends Tasks with TableInfo<$TasksTable, Task> {
     type: DriftSqlType.dateTime,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _isDeletedMeta = const VerificationMeta(
+    'isDeleted',
+  );
+  @override
+  late final GeneratedColumn<bool> isDeleted = GeneratedColumn<bool>(
+    'is_deleted',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_deleted" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -135,6 +150,7 @@ class $TasksTable extends Tasks with TableInfo<$TasksTable, Task> {
     status,
     startTaskAt,
     endTaskAt,
+    isDeleted,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -218,6 +234,12 @@ class $TasksTable extends Tasks with TableInfo<$TasksTable, Task> {
         endTaskAt.isAcceptableOrUnknown(data['end_task_at']!, _endTaskAtMeta),
       );
     }
+    if (data.containsKey('is_deleted')) {
+      context.handle(
+        _isDeletedMeta,
+        isDeleted.isAcceptableOrUnknown(data['is_deleted']!, _isDeletedMeta),
+      );
+    }
     return context;
   }
 
@@ -267,6 +289,10 @@ class $TasksTable extends Tasks with TableInfo<$TasksTable, Task> {
         DriftSqlType.dateTime,
         data['${effectivePrefix}end_task_at'],
       ),
+      isDeleted: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_deleted'],
+      )!,
     );
   }
 
@@ -287,6 +313,7 @@ class Task extends DataClass implements Insertable<Task> {
   final String status;
   final DateTime? startTaskAt;
   final DateTime? endTaskAt;
+  final bool isDeleted;
   const Task({
     required this.id,
     required this.title,
@@ -298,6 +325,7 @@ class Task extends DataClass implements Insertable<Task> {
     required this.status,
     this.startTaskAt,
     this.endTaskAt,
+    required this.isDeleted,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -320,6 +348,7 @@ class Task extends DataClass implements Insertable<Task> {
     if (!nullToAbsent || endTaskAt != null) {
       map['end_task_at'] = Variable<DateTime>(endTaskAt);
     }
+    map['is_deleted'] = Variable<bool>(isDeleted);
     return map;
   }
 
@@ -343,6 +372,7 @@ class Task extends DataClass implements Insertable<Task> {
       endTaskAt: endTaskAt == null && nullToAbsent
           ? const Value.absent()
           : Value(endTaskAt),
+      isDeleted: Value(isDeleted),
     );
   }
 
@@ -362,6 +392,7 @@ class Task extends DataClass implements Insertable<Task> {
       status: serializer.fromJson<String>(json['status']),
       startTaskAt: serializer.fromJson<DateTime?>(json['startTaskAt']),
       endTaskAt: serializer.fromJson<DateTime?>(json['endTaskAt']),
+      isDeleted: serializer.fromJson<bool>(json['isDeleted']),
     );
   }
   @override
@@ -378,6 +409,7 @@ class Task extends DataClass implements Insertable<Task> {
       'status': serializer.toJson<String>(status),
       'startTaskAt': serializer.toJson<DateTime?>(startTaskAt),
       'endTaskAt': serializer.toJson<DateTime?>(endTaskAt),
+      'isDeleted': serializer.toJson<bool>(isDeleted),
     };
   }
 
@@ -392,6 +424,7 @@ class Task extends DataClass implements Insertable<Task> {
     String? status,
     Value<DateTime?> startTaskAt = const Value.absent(),
     Value<DateTime?> endTaskAt = const Value.absent(),
+    bool? isDeleted,
   }) => Task(
     id: id ?? this.id,
     title: title ?? this.title,
@@ -403,6 +436,7 @@ class Task extends DataClass implements Insertable<Task> {
     status: status ?? this.status,
     startTaskAt: startTaskAt.present ? startTaskAt.value : this.startTaskAt,
     endTaskAt: endTaskAt.present ? endTaskAt.value : this.endTaskAt,
+    isDeleted: isDeleted ?? this.isDeleted,
   );
   Task copyWithCompanion(TasksCompanion data) {
     return Task(
@@ -422,6 +456,7 @@ class Task extends DataClass implements Insertable<Task> {
           ? data.startTaskAt.value
           : this.startTaskAt,
       endTaskAt: data.endTaskAt.present ? data.endTaskAt.value : this.endTaskAt,
+      isDeleted: data.isDeleted.present ? data.isDeleted.value : this.isDeleted,
     );
   }
 
@@ -437,7 +472,8 @@ class Task extends DataClass implements Insertable<Task> {
           ..write('serverId: $serverId, ')
           ..write('status: $status, ')
           ..write('startTaskAt: $startTaskAt, ')
-          ..write('endTaskAt: $endTaskAt')
+          ..write('endTaskAt: $endTaskAt, ')
+          ..write('isDeleted: $isDeleted')
           ..write(')'))
         .toString();
   }
@@ -454,6 +490,7 @@ class Task extends DataClass implements Insertable<Task> {
     status,
     startTaskAt,
     endTaskAt,
+    isDeleted,
   );
   @override
   bool operator ==(Object other) =>
@@ -468,7 +505,8 @@ class Task extends DataClass implements Insertable<Task> {
           other.serverId == this.serverId &&
           other.status == this.status &&
           other.startTaskAt == this.startTaskAt &&
-          other.endTaskAt == this.endTaskAt);
+          other.endTaskAt == this.endTaskAt &&
+          other.isDeleted == this.isDeleted);
 }
 
 class TasksCompanion extends UpdateCompanion<Task> {
@@ -482,6 +520,7 @@ class TasksCompanion extends UpdateCompanion<Task> {
   final Value<String> status;
   final Value<DateTime?> startTaskAt;
   final Value<DateTime?> endTaskAt;
+  final Value<bool> isDeleted;
   const TasksCompanion({
     this.id = const Value.absent(),
     this.title = const Value.absent(),
@@ -493,6 +532,7 @@ class TasksCompanion extends UpdateCompanion<Task> {
     this.status = const Value.absent(),
     this.startTaskAt = const Value.absent(),
     this.endTaskAt = const Value.absent(),
+    this.isDeleted = const Value.absent(),
   });
   TasksCompanion.insert({
     this.id = const Value.absent(),
@@ -505,6 +545,7 @@ class TasksCompanion extends UpdateCompanion<Task> {
     this.status = const Value.absent(),
     this.startTaskAt = const Value.absent(),
     this.endTaskAt = const Value.absent(),
+    this.isDeleted = const Value.absent(),
   }) : title = Value(title),
        description = Value(description);
   static Insertable<Task> custom({
@@ -518,6 +559,7 @@ class TasksCompanion extends UpdateCompanion<Task> {
     Expression<String>? status,
     Expression<DateTime>? startTaskAt,
     Expression<DateTime>? endTaskAt,
+    Expression<bool>? isDeleted,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -530,6 +572,7 @@ class TasksCompanion extends UpdateCompanion<Task> {
       if (status != null) 'status': status,
       if (startTaskAt != null) 'start_task_at': startTaskAt,
       if (endTaskAt != null) 'end_task_at': endTaskAt,
+      if (isDeleted != null) 'is_deleted': isDeleted,
     });
   }
 
@@ -544,6 +587,7 @@ class TasksCompanion extends UpdateCompanion<Task> {
     Value<String>? status,
     Value<DateTime?>? startTaskAt,
     Value<DateTime?>? endTaskAt,
+    Value<bool>? isDeleted,
   }) {
     return TasksCompanion(
       id: id ?? this.id,
@@ -556,6 +600,7 @@ class TasksCompanion extends UpdateCompanion<Task> {
       status: status ?? this.status,
       startTaskAt: startTaskAt ?? this.startTaskAt,
       endTaskAt: endTaskAt ?? this.endTaskAt,
+      isDeleted: isDeleted ?? this.isDeleted,
     );
   }
 
@@ -592,6 +637,9 @@ class TasksCompanion extends UpdateCompanion<Task> {
     if (endTaskAt.present) {
       map['end_task_at'] = Variable<DateTime>(endTaskAt.value);
     }
+    if (isDeleted.present) {
+      map['is_deleted'] = Variable<bool>(isDeleted.value);
+    }
     return map;
   }
 
@@ -607,7 +655,8 @@ class TasksCompanion extends UpdateCompanion<Task> {
           ..write('serverId: $serverId, ')
           ..write('status: $status, ')
           ..write('startTaskAt: $startTaskAt, ')
-          ..write('endTaskAt: $endTaskAt')
+          ..write('endTaskAt: $endTaskAt, ')
+          ..write('isDeleted: $isDeleted')
           ..write(')'))
         .toString();
   }
@@ -636,6 +685,7 @@ typedef $$TasksTableCreateCompanionBuilder =
       Value<String> status,
       Value<DateTime?> startTaskAt,
       Value<DateTime?> endTaskAt,
+      Value<bool> isDeleted,
     });
 typedef $$TasksTableUpdateCompanionBuilder =
     TasksCompanion Function({
@@ -649,6 +699,7 @@ typedef $$TasksTableUpdateCompanionBuilder =
       Value<String> status,
       Value<DateTime?> startTaskAt,
       Value<DateTime?> endTaskAt,
+      Value<bool> isDeleted,
     });
 
 class $$TasksTableFilterComposer extends Composer<_$AppDatabase, $TasksTable> {
@@ -706,6 +757,11 @@ class $$TasksTableFilterComposer extends Composer<_$AppDatabase, $TasksTable> {
 
   ColumnFilters<DateTime> get endTaskAt => $composableBuilder(
     column: $table.endTaskAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isDeleted => $composableBuilder(
+    column: $table.isDeleted,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -768,6 +824,11 @@ class $$TasksTableOrderingComposer
     column: $table.endTaskAt,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<bool> get isDeleted => $composableBuilder(
+    column: $table.isDeleted,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$TasksTableAnnotationComposer
@@ -814,6 +875,9 @@ class $$TasksTableAnnotationComposer
 
   GeneratedColumn<DateTime> get endTaskAt =>
       $composableBuilder(column: $table.endTaskAt, builder: (column) => column);
+
+  GeneratedColumn<bool> get isDeleted =>
+      $composableBuilder(column: $table.isDeleted, builder: (column) => column);
 }
 
 class $$TasksTableTableManager
@@ -854,6 +918,7 @@ class $$TasksTableTableManager
                 Value<String> status = const Value.absent(),
                 Value<DateTime?> startTaskAt = const Value.absent(),
                 Value<DateTime?> endTaskAt = const Value.absent(),
+                Value<bool> isDeleted = const Value.absent(),
               }) => TasksCompanion(
                 id: id,
                 title: title,
@@ -865,6 +930,7 @@ class $$TasksTableTableManager
                 status: status,
                 startTaskAt: startTaskAt,
                 endTaskAt: endTaskAt,
+                isDeleted: isDeleted,
               ),
           createCompanionCallback:
               ({
@@ -878,6 +944,7 @@ class $$TasksTableTableManager
                 Value<String> status = const Value.absent(),
                 Value<DateTime?> startTaskAt = const Value.absent(),
                 Value<DateTime?> endTaskAt = const Value.absent(),
+                Value<bool> isDeleted = const Value.absent(),
               }) => TasksCompanion.insert(
                 id: id,
                 title: title,
@@ -889,6 +956,7 @@ class $$TasksTableTableManager
                 status: status,
                 startTaskAt: startTaskAt,
                 endTaskAt: endTaskAt,
+                isDeleted: isDeleted,
               ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))

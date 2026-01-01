@@ -35,9 +35,28 @@ class TaskListScreen extends StatelessWidget {
                   return const _PaginationLoader();
                 }
 
-                return GestureDetector(
-                  onTap: () => controller.showStatusBottomSheet(tasks[index]),
-                  child: _AnimatedTaskCard(task: tasks[index], index: index));
+                return Dismissible(
+                  key: Key(tasks[index].id), 
+    direction: DismissDirection.endToStart,
+    
+    background: Container(
+      margin: const EdgeInsets.only(bottom: 18),
+      decoration: BoxDecoration(
+        color: Colors.red.shade400,
+        borderRadius: BorderRadius.circular(18),
+      ),
+      alignment: Alignment.centerRight,
+      padding: const EdgeInsets.only(right: 20),
+      child: const Icon(Icons.delete_outline, color: Colors.white, size: 28),
+    ),
+
+    onDismissed: (direction) {
+      controller.deleteTask(tasks[index]);
+    },
+                  child: GestureDetector(
+                    onTap: () => controller.showStatusBottomSheet(tasks[index]),
+                    child: _AnimatedTaskCard(task: tasks[index], index: index)),
+                );
               },
             ),
           ),

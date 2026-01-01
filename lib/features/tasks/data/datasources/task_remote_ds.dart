@@ -14,6 +14,7 @@ abstract class TaskRemoteDataSource {
   // Future<void> createTask(Map<String, dynamic> taskData);
   Future<String> createTask(Map<String, dynamic> taskData);
   Future<void> updateTaskStatus(String taskId, int action);
+  Future<void> deleteTask(String id);
 
 }
 
@@ -34,6 +35,11 @@ class TaskRemoteDataSourceImpl implements TaskRemoteDataSource {
       rethrow;
     }
   }
+  @override
+Future<void> deleteTask(String id) async {
+  // ApiClient call karein
+  await apiClient.deleteData('/tasks/$id');
+}
   @override
   Future<List<TaskModel>> getTasks(int page, int limit) async {
     try {

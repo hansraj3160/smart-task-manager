@@ -25,55 +25,81 @@ class TaskRepositoryImpl implements TaskRepository {
     required this.networkInfo,
   });
 
-Future<int> _getUserId() async {
+  Future<int> _getUserId() async {
     String? userIdStr = await _storage.read(key: 'user_id');
     return userIdStr != null ? int.parse(userIdStr) : 0;
   }
-  //  SYNC PENDING TASKS (Background Sync)
 
-@override
+  @override
+  Future<Either<Failure, void>> deleteTask(String taskId) async {
+    try {
+      await localDataSource.markTaskAsDeleted(taskId);
+
+      if (await networkInfo.isConnected) {
+        try {
+          // Server Call
+          await remoteDataSource.deleteTask(taskId);
+        } catch (e) {
+          debugPrint(" Offline Delete: Sync will handle it later");
+        }
+      }
+      return const Right(null);
+    } catch (e) {
+      return Left(CacheFailure("Delete Failed"));
+    }
+  }
+
+  @override
   Future<void> syncPendingTasks() async {
     if (await networkInfo.isConnected) {
       try {
         final userId = await _getUserId();
-     final pendingTasks = await localDataSource.getUnsyncedTasks(userId);
+        final pendingTasks = await localDataSource.getUnsyncedTasks(userId);
         if (pendingTasks.isEmpty) return;
- 
-       
-
         for (var task in pendingTasks) {
           try {
-            // CASE 1: New Task (No Server ID) -> Create & Update
-            if (task.serverId == null) {
+            if (task.isDeleted == true) {
+              if (task.serverId != null) {
+                try {
+                  debugPrint(" Syncing DELETE for: ${task.title}");
+                  await remoteDataSource.deleteTask(task.serverId!);
+                  await localDataSource.deleteTaskPermanently(task.id);
+                } catch (e) {
+                  debugPrint("Delete Sync Failed: $e");
+                }
+              } else {
+                await localDataSource.deleteTaskPermanently(task.id);
+              }
+            } else if (task.serverId == null) {
               final Map<String, dynamic> taskData = {
                 "userId": userId,
                 "title": task.title,
                 "description": task.description,
                 "startDate": task.startTaskAt != null
-                    ? DateFormat('yyyy-MM-dd').format(task.startTaskAt!) : null,
+                    ? DateFormat('yyyy-MM-dd').format(task.startTaskAt!)
+                    : null,
                 "startTime": task.startTaskAt != null
-                    ? DateFormat('HH:mm').format(task.startTaskAt!) : null,
+                    ? DateFormat('HH:mm').format(task.startTaskAt!)
+                    : null,
                 "endDate": task.endTaskAt != null
-                    ? DateFormat('yyyy-MM-dd').format(task.endTaskAt!) : null,
+                    ? DateFormat('yyyy-MM-dd').format(task.endTaskAt!)
+                    : null,
                 "endTime": task.endTaskAt != null
-                    ? DateFormat('HH:mm').format(task.endTaskAt!) : null,
+                    ? DateFormat('HH:mm').format(task.endTaskAt!)
+                    : null,
               };
-
               debugPrint("Creating New Task on Sync: ${task.title}");
               final serverId = await remoteDataSource.createTask(taskData);
               await localDataSource.updateTaskSyncStatus(task.id, serverId);
-
-              // Update Status if needed
               await _syncTaskStatus(serverId, task.status);
-            } 
-            
-            // CASE 2: Existing Task (Has Server ID) -> Update Status
-            else {
+            } else {
               debugPrint("Updating Existing Task on Sync: ${task.title}");
               await _syncTaskStatus(task.serverId!, task.status);
-              
-              // Mark as Synced
-              await localDataSource.updateTaskSyncStatus(task.id, task.serverId!);
+
+              await localDataSource.updateTaskSyncStatus(
+                task.id,
+                task.serverId!,
+              );
             }
           } catch (e) {
             debugPrint("❌ Failed to sync task '${task.title}': $e");
@@ -95,22 +121,24 @@ Future<int> _getUserId() async {
         } catch (_) {
           // Ignore: Maybe already processing
         }
-      } 
-      else if (status == 'completed') {
+      } else if (status == 'completed') {
         // Flow: Pending -> Processing -> Completed
-        try { await remoteDataSource.updateTaskStatus(serverId, 1); } catch (_) {} 
-        try { await remoteDataSource.updateTaskStatus(serverId, 2); } catch (_) {}
-      } 
-      else if (status == 'canceled') {
+        try {
+          await remoteDataSource.updateTaskStatus(serverId, 1);
+        } catch (_) {}
+        try {
+          await remoteDataSource.updateTaskStatus(serverId, 2);
+        } catch (_) {}
+      } else if (status == 'canceled') {
         // FIX: Try 'Pending -> Cancel' (Action 4) FIRST
         try {
           await remoteDataSource.updateTaskStatus(serverId, 4);
         } catch (e) {
           // If fail, Try 'Processing -> Cancel' (Action 3)
           try {
-             await remoteDataSource.updateTaskStatus(serverId, 3);
+            await remoteDataSource.updateTaskStatus(serverId, 3);
           } catch (e2) {
-             debugPrint("Could not cancel task (maybe already canceled): $e2");
+            debugPrint("Could not cancel task (maybe already canceled): $e2");
           }
         }
       }
@@ -119,24 +147,29 @@ Future<int> _getUserId() async {
     }
   }
 
- 
   //  CREATE TASK
 
   @override
-  Future<Either<Failure, void>> createTask(Map<String, dynamic> taskData) async {
+  Future<Either<Failure, void>> createTask(
+    Map<String, dynamic> taskData,
+  ) async {
     try {
       // Parse Dates for Local DB
       final userId = await _getUserId();
       DateTime? startAt;
       if (taskData['startDate'] != null && taskData['startTime'] != null) {
         try {
-          startAt = DateTime.parse("${taskData['startDate']} ${taskData['startTime']}");
+          startAt = DateTime.parse(
+            "${taskData['startDate']} ${taskData['startTime']}",
+          );
         } catch (_) {}
       }
       DateTime? endAt;
       if (taskData['endDate'] != null && taskData['endTime'] != null) {
         try {
-          endAt = DateTime.parse("${taskData['endDate']} ${taskData['endTime']}");
+          endAt = DateTime.parse(
+            "${taskData['endDate']} ${taskData['endTime']}",
+          );
         } catch (_) {}
       }
 
@@ -172,9 +205,8 @@ Future<int> _getUserId() async {
     }
   }
 
-   
   // GET TASKS (With Caching)
-   
+
   @override
   Future<Either<Failure, List<TaskModel>>> getTasks(int page, int limit) async {
     final userId = await _getUserId();
@@ -202,19 +234,23 @@ Future<int> _getUserId() async {
       } catch (e) {
         return Left(ServerFailure(e.toString()));
       }
-    } 
+    }
     // 2. Offline -> Fetch Local
     else {
       try {
-      final localTasks = await localDataSource.getAllTasks(userId);
+        final localTasks = await localDataSource.getAllTasks(userId);
 
-        final tasks = localTasks.map((t) => TaskModel(
-          id: t.serverId ?? t.id.toString(),
-          title: t.title,
-          description: t.description,
-          status: t.status,
-          startTaskAt: t.startTaskAt,
-        )).toList();
+        final tasks = localTasks
+            .map(
+              (t) => TaskModel(
+                id: t.serverId ?? t.id.toString(),
+                title: t.title,
+                description: t.description,
+                status: t.status,
+                startTaskAt: t.startTaskAt,
+              ),
+            )
+            .toList();
 
         return Right(tasks);
       } catch (e) {
@@ -225,8 +261,10 @@ Future<int> _getUserId() async {
 
   // UPDATE STATUS
 
-  
-  Future<Either<Failure, void>> updateTaskStatus(String taskId, int action) async {
+  Future<Either<Failure, void>> updateTaskStatus(
+    String taskId,
+    int action,
+  ) async {
     try {
       String newStatus = 'pending';
       if (action == 1) newStatus = 'processing';

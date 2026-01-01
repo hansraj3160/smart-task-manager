@@ -22,12 +22,12 @@ class TaskController extends GetxController with StateMixin<List<TaskModel>> {
   void onInit() {
     super.onInit();
     fetchInitialTasks();
-    _checkConnectivityAndSync();
+  
     InternetConnectionChecker.instance.onStatusChange.listen((status) {
       if (_debounceTimer?.isActive ?? false) _debounceTimer!.cancel();
       _debounceTimer = Timer(const Duration(seconds: 2), () {
       if (status == InternetConnectionStatus.connected) {
-        debugPrint("🟢 Internet Restored: Auto Refreshing Tasks...");
+        debugPrint(" Internet Restored: Auto Refreshing Tasks...");
        _performSync();
       }
       });});
@@ -48,16 +48,29 @@ class TaskController extends GetxController with StateMixin<List<TaskModel>> {
    Get.find<HomeController>().fetchSummary();
   }
 
-  void _checkConnectivityAndSync() {
-    // 1. Agar net hai toh pending tasks bhejo
-    // Note: Iske liye humein repository mein 'syncAllPending()' method banana padega
-    // Jo humne abhi skip kiya hai complexity kam karne ke liye.
 
-    // Simple logic: Jab bhi list refresh ho, naya data server se lo
-    // Local-Server sync ek advanced topic hai (Background Services chahiye hoti hain).
-    // Interview ke liye "Offline Creation" (Step 1 & 2) kaafi hai.
+Future<void> deleteTask(TaskModel task) async {
+
+  final index = _allTasks.indexWhere((t) => t.id == task.id);
+  if (index != -1) {
+    _allTasks.removeAt(index);
+    change(_allTasks, status: RxStatus.success()); // Refresh UI
   }
-  // First Time Load
+
+  // 2. Repository call
+  final result = await repository.deleteTask(task.id);
+  
+  result.fold(
+    (failure) {
+      showSnack(message: "Task marked for deletion", type: SnackType.warning);
+    },
+    (success) {
+        // refreshTasks();
+   Get.find<HomeController>().fetchSummary();
+      showSnack(message: "Task deleted successfully", type: SnackType.success);
+    },
+  );
+}
   Future<void> fetchInitialTasks() async {
     page = 1;
     hasMore.value = true;
@@ -65,13 +78,11 @@ class TaskController extends GetxController with StateMixin<List<TaskModel>> {
     change(null, status: RxStatus.loading()); // Full screen loader
     await _getData();
   }
-
-  // Load Next Page
   Future<void> loadMore() async {
     if (isMoreLoading.value || !hasMore.value) return;
 
     isMoreLoading.value = true;
-    page++; // Next Page
+    page++; 
     await _getData();
     isMoreLoading.value = false;
   }

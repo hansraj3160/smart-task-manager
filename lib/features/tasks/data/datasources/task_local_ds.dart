@@ -22,6 +22,7 @@ class Tasks extends Table {
   TextColumn get status => text().withDefault(const Constant('pending'))();
   DateTimeColumn get startTaskAt => dateTime().nullable()();
   DateTimeColumn get endTaskAt => dateTime().nullable()();
+  BoolColumn get isDeleted => boolean().withDefault(const Constant(false))();
 }
 // 2. Database Class (Drift)
 
@@ -30,27 +31,33 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 2;
+int get schemaVersion => 3;
 
   // --- Core Queries ---
  @override
-MigrationStrategy get migration {
-  return MigrationStrategy(
-    onCreate: (Migrator m) async {
-      await m.createAll();
-    },
-    onUpgrade: (Migrator m, int from, int to) async {
-      if (from < 2) { 
-        // YOU MUST ADD THIS LINE:
-        // 'tasks' is your table class, 'userId' is the column field in that class
-        await m.addColumn(tasks, tasks.userId); 
-      }
-    },
-  );
+  MigrationStrategy get migration {
+    return MigrationStrategy(
+      onCreate: (Migrator m) async {
+        await m.createAll();
+      },
+      onUpgrade: (Migrator m, int from, int to) async {
+        if (from < 2) {
+           await m.addColumn(tasks, tasks.userId);
+        }
+        // STEP: Add Migration for Version 3
+        if (from < 3) {
+          await m.addColumn(tasks, tasks.isDeleted);
+        }
+      },
+    );
 }
+
   Future<List<Task>> getAllTasks(int userId) {
-    return (select(tasks)..where((t) => t.userId.equals(userId))).get();
+    return (select(tasks)..where((t) => 
+      t.userId.equals(userId) & t.isDeleted.equals(false)
+    )).get();
   }
+  
  Future<List<Task>> getUnsyncedTasks(int userId) {
     return (select(tasks)
       ..where((t) => t.isSynced.equals(false) & t.userId.equals(userId)))
@@ -67,10 +74,27 @@ MigrationStrategy get migration {
       ),
     );
   }
+Future<void> markTaskAsDeleted(String id) async{
+   int? localId = int.tryParse(id);
+    if (localId != null) {
+      // Try by Local ID
+      final count = await (update(tasks)..where((t) => t.id.equals(localId))).write(
+        TasksCompanion(isDeleted: const Value(true), isSynced: const Value(false))
+      );
+      if (count > 0) return;
+    }
+    // Try by Server ID
+    await (update(tasks)..where((t) => t.serverId.equals(id))).write(
+      TasksCompanion(isDeleted: const Value(true), isSynced: const Value(false))
+    );
+  
+  }
 
   Future<void> deleteAllTasks() => delete(tasks).go();
   Future<int> deleteTask(int id) => (delete(tasks)..where((t) => t.id.equals(id))).go();
-  
+  Future<void> deleteTaskPermanently(int localId) {
+    return (delete(tasks)..where((t) => t.id.equals(localId))).go();
+  }
 }
 
 LazyDatabase _openConnection() {
@@ -91,6 +115,8 @@ abstract class TaskLocalDataSource {
  Future<List<Task>> getUnsyncedTasks(int userId);
   Future<void> updateLocalTaskStatus(String serverId, String newStatus);
   Future<void> cacheTasks(List<TasksCompanion> tasks);
+  Future<void> markTaskAsDeleted(String id);
+  Future<void> deleteTaskPermanently(int id);
   Future<void> clearAllData();
 }
 
@@ -106,7 +132,11 @@ class TaskLocalDataSourceImpl implements TaskLocalDataSource {
   Future<List<Task>> getAllTasks(int userId) => db.getAllTasks(userId);
   @override
   Future<int> insertTask(TasksCompanion task) => db.insertTask(task);
-
+@override
+  Future<void> markTaskAsDeleted(String id) => db.markTaskAsDeleted(id);
+  
+  @override
+  Future<void> deleteTaskPermanently(int id) => db.deleteTask(id);
   @override
   Future<void> updateTaskSyncStatus(int localId, String serverId) => 
       db.markAsSynced(localId, serverId);
