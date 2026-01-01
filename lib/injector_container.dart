@@ -28,6 +28,11 @@ Future<void> init() async {
 
   // 3. Database (Drift)
   Get.lazyPut(() => AppDatabase(), fenix: true);
+  //Register TaskLocalDataSource
+  Get.lazyPut<TaskLocalDataSource>(
+    () => TaskLocalDataSourceImpl(Get.find()),  
+    fenix: true
+  );
   // Remote API Source
   Get.lazyPut<TaskRemoteDataSource>(
     () => TaskRemoteDataSourceImpl(Get.find()),

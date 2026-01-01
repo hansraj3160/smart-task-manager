@@ -23,28 +23,31 @@ class TaskRepositoryImpl implements TaskRepository {
 @override
   Future<Either<Failure, void>> createTask(Map<String, dynamic> taskData) async {
     try {
+      DateTime? startAt;
+      if (taskData['startDate'] != null && taskData['startTime'] != null) {
+        try {
+          startAt = DateTime.parse("${taskData['startDate']} ${taskData['startTime']}"); // Simple Combine
+        } catch (_) {}
+      }
       // 1.  ALWAYS Save to Local DB First (Offline Save)
-      final localId = await localDataSource.insertTask(
-        TasksCompanion(
-          title: drift.Value(taskData['title']),
-          description: drift.Value(taskData['description']),
-          isCompleted: const drift.Value(false),
-          isSynced: const drift.Value(false), // Abhi sync nahi hua
-          serverId: const drift.Value(null),
-        ),
-      );
+    final localId = await localDataSource.insertTask(
+      TasksCompanion(
+        title: drift.Value(taskData['title']),
+        description: drift.Value(taskData['description']),
+        isCompleted: const drift.Value(false),
+        isSynced: const drift.Value(false), 
+        serverId: const drift.Value(null),
+        status: const drift.Value('pending'),
+          startTaskAt: drift.Value(startAt),
+      )
+    );
 
       // 2.  Check Internet & Sync
       if (await networkInfo.isConnected) {
         try {
-          // Server par bhejo
-          final response = await remoteDataSource.createTask(taskData);
-          
-          // Agar server ID return karta hai (Ex: response['task']['id'])
-          // Toh hum local DB update karenge. 
-          // Assuming response mein serverId hai (agar nahi hai to API response modify karna padega)
-          // String serverId = response['id']; 
-          // await localDataSource.updateTaskSyncStatus(localId, serverId);
+        
+          final serverId = await remoteDataSource.createTask(taskData); 
+         await localDataSource.updateTaskSyncStatus(localId, serverId);
           
         } catch (e) {
 
@@ -56,7 +59,7 @@ class TaskRepositoryImpl implements TaskRepository {
       return const Right(null);
 
     } catch (e) {
-      // Agar Local DB hi fail ho gaya, tabhi error dikhao
+     debugPrint("Local save failed: $e");
       return Left(CacheFailure("Local Save Failed: $e"));
     }
   }
@@ -75,30 +78,33 @@ class TaskRepositoryImpl implements TaskRepository {
   }
   @override
 Future<Either<Failure, List<TaskModel>>> getTasks(int page, int limit) async {
-  if (await networkInfo.isConnected) {
-    try {
-      final tasks = await remoteDataSource.getTasks(page, limit);
-      return Right(tasks);
-    } catch (e) {
-      return Left(ServerFailure(e.toString()));
+ if (await networkInfo.isConnected) {
+      try {
+        final remoteTasks = await remoteDataSource.getTasks(page, limit);
+        return Right(remoteTasks);
+      } catch (e) {
+        // Agar Server fail hua, toh bhi Local try kar sakte hain (Optional)
+        return Left(ServerFailure(e.toString()));
+      }
     }
-  } else {
-     
-    return Left(const NetworkFailure("No Internet Connection"));
-  }
+    else {
+      try {
+        final localTasks = await localDataSource.getAllTasks();
+        
+        // Drift Task ko TaskModel mein convert karein
+        final tasks = localTasks.map((t) => TaskModel(
+          id: t.serverId ?? t.id.toString(), // ServerID prefer karein
+          title: t.title,
+          description: t.description,
+          status: t.status, // Ab DB mein status hai
+          startTaskAt: t.startTaskAt,
+        )).toList();
+
+        return Right(tasks);
+      } catch (e) {
+        return Left(CacheFailure("No local data found"));
+      }
+    }
 }
 
-// @override
-// Future<Either<Failure, void>> createTask(Map<String, dynamic> taskData) async {
-//   if (await networkInfo.isConnected) {
-//     try {
-//       await remoteDataSource.createTask(taskData);
-//       return const Right(null);
-//     } catch (e) {
-//       return Left(ServerFailure(e.toString()));
-//     }
-//   } else {
-//     return Left(const NetworkFailure("No Internet Connection"));
-//   }
-// }
 }

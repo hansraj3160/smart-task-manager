@@ -20,7 +20,7 @@ class TaskModel {
       id: json['id'],
       title: json['title'],
       description: json['description'],
-      status: json['status'] ?? 'to_do',
+      status: json['status'] ?? 'processing',
       startTaskAt: json['startTaskAt'] != null 
           ? DateTime.parse(json['startTaskAt']) 
           : null,

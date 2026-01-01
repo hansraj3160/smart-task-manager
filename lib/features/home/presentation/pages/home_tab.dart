@@ -46,8 +46,8 @@ class HomeTab extends StatelessWidget {
                 mainAxisSpacing: 16,
                 children: [
                   Obx(() => StatCard(
-                        title: "To Do",
-                        count: controller.todo.value,
+                        title: "processing",
+                        count: controller.processing.value,
                         color: Colors.blue,
                         icon: Icons.assignment_outlined,
                         isLoading: controller.isLoading.value,

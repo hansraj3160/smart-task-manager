@@ -15,9 +15,12 @@ class Tasks extends Table {
   TextColumn get description => text()();
   BoolColumn get isCompleted => boolean().withDefault(const Constant(false))();
   
-  // Sync Logic Columns
+  // Sync Logic 
   BoolColumn get isSynced => boolean().withDefault(const Constant(true))(); 
   TextColumn get serverId => text().nullable()();
+  // NEW COLUMNS (Offline Support ke liye)
+  TextColumn get status => text().withDefault(const Constant('pending'))();
+  DateTimeColumn get startTaskAt => dateTime().nullable()();
 }
 
 // -----------------------------------------------------------------------------

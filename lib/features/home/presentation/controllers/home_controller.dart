@@ -5,7 +5,7 @@ import '../../../tasks/domain/repositories/task_repository.dart';
 class HomeController extends GetxController with StateMixin<TaskSummaryModel> {
 
   final TaskRepository repository = Get.find(); 
-final todo = 0.obs;
+final processing = 0.obs;
   final pending = 0.obs;
   final completed = 0.obs;
   final canceled = 0.obs;
@@ -26,7 +26,7 @@ final todo = 0.obs;
     result.fold(
       (failure) => change(null, status: RxStatus.error(failure.message)),
       (TaskSummaryModel summary) {
-        todo.value = summary.todo;
+        processing.value = summary.processing;
         pending.value = summary.pending;
         completed.value = summary.completed;
         canceled.value = summary.canceled;

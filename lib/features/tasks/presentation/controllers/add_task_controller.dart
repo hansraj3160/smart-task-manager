@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:smart_task_manager/core/widgets/custom_snackbar.dart';
+import '../../../home/presentation/controllers/home_controller.dart';
 import '../../domain/repositories/task_repository.dart';
 import '../../presentation/controllers/task_controller.dart';
 
@@ -103,16 +104,20 @@ class AddTaskController extends GetxController {
          
           showSnack(message:  "Task created successfully!", type: SnackType.success);
           _clearForm(); // Form Clear
-          
-   
+
           if (Get.isRegistered<TaskController>()) {
              Get.find<TaskController>().refreshTasks();
           }
-          
- 
+          if (Get.isRegistered<HomeController>()) {
+             Get.find<HomeController>().fetchSummary();
+          }
+
+          // Close Screen
           Future.delayed(const Duration(seconds: 1), () {
              Get.back(); 
           });
+ 
+         
         },
       );
     } finally {

@@ -1,4 +1,5 @@
 // Import model
+import 'package:flutter/material.dart';
 import 'package:smart_task_manager/core/utils/app_constants.dart';
 import 'package:smart_task_manager/features/tasks/data/models/task_model.dart';
 
@@ -10,7 +11,8 @@ abstract class TaskRemoteDataSource {
 
   Future<TaskSummaryModel> getTaskSummary();
   Future<List<TaskModel>> getTasks(int page, int limit);
-  Future<void> createTask(Map<String, dynamic> taskData);
+  // Future<void> createTask(Map<String, dynamic> taskData);
+  Future<String> createTask(Map<String, dynamic> taskData);
 }
 
 class TaskRemoteDataSourceImpl implements TaskRemoteDataSource {
@@ -54,7 +56,7 @@ class TaskRemoteDataSourceImpl implements TaskRemoteDataSource {
   }
 
   @override
-  Future<void> createTask(Map<String, dynamic> taskData) async {
+  Future<String> createTask(Map<String, dynamic> taskData) async {
     try {
       final response = await apiClient.postData(
         AppConstants.tasksUri, 
@@ -62,7 +64,8 @@ class TaskRemoteDataSourceImpl implements TaskRemoteDataSource {
       );
 
       if (response.statusCode == 200 || response.statusCode == 201) {
-        return; // Success
+        debugPrint("Task created: ${response.body['task']['id']}");
+      return response.body['task']['id'];
       } else {
         throw Exception(response.statusText);
       }

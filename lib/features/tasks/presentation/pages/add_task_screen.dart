@@ -32,8 +32,8 @@ class AddTaskScreen extends StatelessWidget {
                 textInputAction: TextInputAction.next,
                 decoration:  InputDecoration(
                   labelText: "Task Title",
-                  labelStyle: TextStyle(color:controller.titleController.text.contains('Task Title')? const Color.fromARGB(255, 120, 120, 120): Theme.of(context).colorScheme.primary),
-                  prefixIcon: Icon(Icons.title),
+                  labelStyle: TextStyle(color:!controller.titleController.text.contains('Task Title')? const Color.fromARGB(255, 120, 120, 120): Theme.of(context).colorScheme.primary),
+                  prefixIcon: Icon(Icons.title, color: Theme.of(context).colorScheme.primary),
                 ),
               ),
 
@@ -45,8 +45,8 @@ class AddTaskScreen extends StatelessWidget {
                 maxLines: 3,
                 decoration:  InputDecoration(
                   labelText: "Description",
-                  labelStyle: TextStyle(color:controller.descController.text.contains('Description')? const Color.fromARGB(255, 120, 120, 120): Theme.of(context).colorScheme.primary),
-                  prefixIcon: Icon(Icons.description),
+                  labelStyle: TextStyle(color:!controller.descController.text.contains('Description')? const Color.fromARGB(255, 120, 120, 120): Theme.of(context).colorScheme.primary),
+                  prefixIcon: Icon(Icons.description, color: Theme.of(context).colorScheme.primary  ),
                 ),
 
               ),
@@ -216,19 +216,19 @@ class _PickerField extends StatelessWidget {
       onTap: onTap,
       child: InputDecorator(
         decoration: InputDecoration(
-          prefixIcon: Icon(icon),
+          prefixIcon: Icon(icon,color: Theme.of(context).colorScheme.primary,),
           contentPadding:
-              const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+              const EdgeInsets.symmetric(horizontal: 7, vertical: 10),
         ),
         child: Text(
           label,
           style: TextStyle(
-            fontSize: 16,
+            fontSize: 14,
             color: Theme.of(context).textTheme.bodyMedium?.color,
           ).copyWith(
             color: label.contains("Date") || label.contains("Time") || label.contains("Task") || label.contains("Description")
                 ?const Color.fromARGB(255, 120, 120, 120)
-                : Theme.of(context).colorScheme.primary,
+                :const Color.fromARGB(255, 100, 100, 100),
           ),
         ),
       ),

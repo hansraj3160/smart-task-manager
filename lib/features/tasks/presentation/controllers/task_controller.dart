@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:internet_connection_checker/internet_connection_checker.dart';
 import 'package:smart_task_manager/core/widgets/custom_snackbar.dart';
 import '../../domain/repositories/task_repository.dart';
 import '../../data/models/task_model.dart';
@@ -7,49 +8,43 @@ import '../../data/models/task_model.dart';
 class TaskController extends GetxController with StateMixin<List<TaskModel>> {
   final TaskRepository repository = Get.find();
   final ScrollController scrollController = ScrollController();
-  
+
   var page = 1;
-  final int limit = 10;  
+  final int limit = 10;
   var isMoreLoading = false.obs;
   var hasMore = true.obs;
   final List<TaskModel> _allTasks = [];
-@override
+  @override
   void onInit() {
     super.onInit();
     fetchInitialTasks();
-    /*
-    Connectivity().onConnectivityChanged.listen((result) {
-      if (result != ConnectivityResult.none) {
-        syncPendingTasks();
+    _checkConnectivityAndSync();
+    InternetConnectionChecker.instance.onStatusChange.listen((status) {
+      if (status == InternetConnectionStatus.connected) {
+        debugPrint("🟢 Internet Restored: Auto Refreshing Tasks...");
+        refreshTasks(); // Net aate hi list refresh hogi
       }
     });
-    */
- 
+  
     scrollController.addListener(() {
-      if (scrollController.position.pixels >= scrollController.position.maxScrollExtent &&
+      if (scrollController.position.pixels >=
+              scrollController.position.maxScrollExtent &&
           !isMoreLoading.value &&
           hasMore.value) {
         loadMore();
       }
     });
   }
-void syncPendingTasks() async {
-   // 1. Local DB se unsynced tasks nikalo
-    // final unsyncedList = await localDataSource.getUnsyncedTasks();
-    
-    // 2. Loop chala kar API par bhejo
-    /*
-    for (var task in unsyncedList) {
-       try {
-         final serverId = await remoteDataSource.createTask(task.toMap());
-         await localDataSource.updateTaskSyncStatus(task.id, serverId);
-       } catch (e) {
-         // Retry later
-       }
-    }
-    */
-    debugPrint("Sync check completed");
-  } 
+
+  void _checkConnectivityAndSync() {
+    // 1. Agar net hai toh pending tasks bhejo
+    // Note: Iske liye humein repository mein 'syncAllPending()' method banana padega
+    // Jo humne abhi skip kiya hai complexity kam karne ke liye.
+
+    // Simple logic: Jab bhi list refresh ho, naya data server se lo
+    // Local-Server sync ek advanced topic hai (Background Services chahiye hoti hain).
+    // Interview ke liye "Offline Creation" (Step 1 & 2) kaafi hai.
+  }
   // First Time Load
   Future<void> fetchInitialTasks() async {
     page = 1;
@@ -62,7 +57,7 @@ void syncPendingTasks() async {
   // Load Next Page
   Future<void> loadMore() async {
     if (isMoreLoading.value || !hasMore.value) return;
-    
+
     isMoreLoading.value = true;
     page++; // Next Page
     await _getData();
@@ -83,17 +78,18 @@ void syncPendingTasks() async {
         if (page == 1) {
           change(null, status: RxStatus.error(failure.message));
         } else {
-          
-          showSnack(message:  "Could not load more tasks", type: SnackType.error);
+          showSnack(
+            message: "Could not load more tasks",
+            type: SnackType.error,
+          );
         }
       },
       (newTasks) {
-      
         if (newTasks.length < limit) {
-          hasMore.value = false; 
+          hasMore.value = false;
         }
 
-        _allTasks.addAll(newTasks);  
+        _allTasks.addAll(newTasks);
 
         if (_allTasks.isEmpty) {
           change([], status: RxStatus.empty());
@@ -103,7 +99,7 @@ void syncPendingTasks() async {
       },
     );
   }
-  
+
   @override
   void onClose() {
     scrollController.dispose();
