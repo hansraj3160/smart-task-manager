@@ -92,7 +92,7 @@ void main() {
 
     final ctrl = HomeController();
     
-    // ✅ Act: Manually call onInit() 
+    // Act: Manually call onInit() 
     // (Kyunki test environment mein Get.put ke bina constructor onInit call nahi karta)
     ctrl.onInit(); 
 

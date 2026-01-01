@@ -149,7 +149,7 @@ class TaskLocalDataSourceImpl implements TaskLocalDataSource {
     await (db.update(db.tasks)..where((t) => t.serverId.equals(id))).write(
       TasksCompanion(
         status: Value(newStatus),
-        isSynced: const Value(false),
+        isSynced:   Value(isSynced),
       ),
     );
   }
@@ -164,7 +164,9 @@ class TaskLocalDataSourceImpl implements TaskLocalDataSource {
           
           if (exists != null) {
             
-            await (db.update(db.tasks)..where((t) => t.id.equals(exists.id))).write(task);
+           if (exists.isSynced) {
+     await (db.update(db.tasks)..where((t) => t.id.equals(exists.id))).write(task);
+  }
           } else {
            
             await db.into(db.tasks).insert(task);

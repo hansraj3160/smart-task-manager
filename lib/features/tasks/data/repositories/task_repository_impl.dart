@@ -59,10 +59,9 @@ class TaskRepositoryImpl implements TaskRepository {
         for (var task in pendingTasks) {
           try {
             if (task.isDeleted == true) {
-                debugPrint(" Syncing DELETE for: ${task.title}");
+              debugPrint(" Syncing DELETE for: ${task.title}");
               if (task.serverId != null) {
                 try {
-                
                   await remoteDataSource.deleteTask(task.serverId!);
                   await localDataSource.deleteTaskPermanently(task.id);
                   debugPrint("Deleted from Server & Local");
@@ -94,15 +93,17 @@ class TaskRepositoryImpl implements TaskRepository {
               debugPrint("Creating New Task on Sync: ${task.title}");
               final serverId = await remoteDataSource.createTask(taskData);
               await localDataSource.updateTaskSyncStatus(task.id, serverId);
-              await _syncTaskStatus(serverId, task.status);
+             
             } else {
               debugPrint("Updating Existing Task on Sync: ${task.title}");
-              await _syncTaskStatus(task.serverId!, task.status);
+             bool success = await _syncTaskStatus(task.serverId!, task.status);
 
+            if (success) {
               await localDataSource.updateTaskSyncStatus(
                 task.id,
                 task.serverId!,
               );
+            }
             }
           } catch (e) {
             debugPrint("Failed to sync task '${task.title}': $e");
@@ -115,38 +116,41 @@ class TaskRepositoryImpl implements TaskRepository {
   }
 
   // Helper Function: Smart Status Update
-  Future<void> _syncTaskStatus(String serverId, String status) async {
+  Future<bool> _syncTaskStatus(String serverId, String status) async {
     try {
       if (status == 'processing') {
-        
         try {
           await remoteDataSource.updateTaskStatus(serverId, 1);
+          return true;
         } catch (_) {
-          
+           
         }
       } else if (status == 'completed') {
-        
         try {
-          await remoteDataSource.updateTaskStatus(serverId, 1);
-        } catch (_) {}
-        try {
-          await remoteDataSource.updateTaskStatus(serverId, 2);
-        } catch (_) {}
+        await remoteDataSource.updateTaskStatus(serverId, 1);
+        await remoteDataSource.updateTaskStatus(serverId, 2);
+        return true;
+      } catch (e) {
+        debugPrint("Complete status sync failed: $e");
+        return false; 
+      }
       } else if (status == 'canceled') {
-         
+       try {
+        await remoteDataSource.updateTaskStatus(serverId, 4);
+        return true;
+      } catch (e) {
         try {
-          await remoteDataSource.updateTaskStatus(serverId, 4);
-        } catch (e) {
-         
-          try {
-            await remoteDataSource.updateTaskStatus(serverId, 3);
-          } catch (e2) {
-            debugPrint("Could not cancel task (maybe already canceled): $e2");
-          }
+          await remoteDataSource.updateTaskStatus(serverId, 3);
+          return true;
+        } catch (e2) {
+           return false; // Failed both attempts
         }
       }
+      }
+      return true;
     } catch (e) {
       debugPrint("Status Sync Error: $e");
+      return false;
     }
   }
 
@@ -211,7 +215,7 @@ class TaskRepositoryImpl implements TaskRepository {
   @override
   Future<Either<Failure, List<TaskModel>>> getTasks(int page, int limit) async {
     final userId = await _getUserId();
-   
+
     if (await networkInfo.isConnected) {
       try {
         final remoteTasks = await remoteDataSource.getTasks(page, limit);
@@ -224,8 +228,8 @@ class TaskRepositoryImpl implements TaskRepository {
             description: drift.Value(task.description ?? ""),
             status: drift.Value(task.status),
             isSynced: const drift.Value(true),
-            startTaskAt: drift.Value(task.startTaskAt),  
-             endTaskAt: drift.Value(task.endTaskAt),  
+            startTaskAt: drift.Value(task.startTaskAt),
+            endTaskAt: drift.Value(task.endTaskAt),
           );
         }).toList();
 
@@ -234,9 +238,7 @@ class TaskRepositoryImpl implements TaskRepository {
       } catch (e) {
         return Left(ServerFailure(e.toString()));
       }
-    }
-   
-    else {
+    } else {
       try {
         final localTasks = await localDataSource.getAllTasks(userId);
 
@@ -272,16 +274,23 @@ class TaskRepositoryImpl implements TaskRepository {
       if (action == 3 || action == 4) newStatus = 'canceled';
 
       // 1. Optimistic Update (Local)
-      await localDataSource.updateLocalTaskStatus(taskId, newStatus, isSynced: false);
+      await localDataSource.updateLocalTaskStatus(
+        taskId,
+        newStatus,
+        isSynced: false,
+      );
 
       // 2. API Update
       if (await networkInfo.isConnected) {
         try {
           await remoteDataSource.updateTaskStatus(taskId, action);
-          await localDataSource.updateLocalTaskStatus(taskId, newStatus, isSynced: true);
-          
+          await localDataSource.updateLocalTaskStatus(
+            taskId,
+            newStatus,
+            isSynced: true,
+          );
+
           debugPrint("Task status updated on server & marked synced.");
-      
         } catch (e) {
           debugPrint("API Update Failed: $e");
         }
