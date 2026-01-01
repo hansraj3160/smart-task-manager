@@ -189,7 +189,7 @@ class TaskRepositoryImpl implements TaskRepository {
           isCompleted: const drift.Value(false),
           isSynced: const drift.Value(false),
           serverId: const drift.Value(null),
-          status: const drift.Value('to_do'), // Default status
+          status: const drift.Value('pending'), // Default status
           startTaskAt: drift.Value(startAt),
           endTaskAt: drift.Value(endAt),
         ),

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import 'package:smart_task_manager/core/utils/app_colors.dart';
+import 'package:smart_task_manager/features/tasks/presentation/pages/add_task_screen.dart';
 
 import '../controllers/task_controller.dart';
 import '../../data/models/task_model.dart';
@@ -14,56 +16,125 @@ class TaskListScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final controller = Get.put(TaskController());
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFF6F7FB),
-      appBar: AppBar(
-        title: const Text("My Tasks"),
-        centerTitle: true,
-        elevation: 0,
-      ),
-      body: RefreshIndicator(
-        onRefresh: controller.refreshTasks,
-        child: controller.obx(
-          (tasks) => Obx(
-            () => ListView.builder(
-              controller: controller.scrollController,
-              padding: const EdgeInsets.all(16),
-              itemCount:
-                  tasks!.length + (controller.isMoreLoading.value ? 1 : 0),
-              itemBuilder: (context, index) {
-                if (index == tasks.length) {
-                  return const _PaginationLoader();
-                }
-
-                return Dismissible(
-                  key: Key(tasks[index].id), 
-    direction: DismissDirection.endToStart,
-    
-    background: Container(
-      margin: const EdgeInsets.only(bottom: 18),
-      decoration: BoxDecoration(
-        color: Colors.red.shade400,
-        borderRadius: BorderRadius.circular(18),
-      ),
-      alignment: Alignment.centerRight,
-      padding: const EdgeInsets.only(right: 20),
-      child: const Icon(Icons.delete_outline, color: Colors.white, size: 28),
-    ),
-
-    onDismissed: (direction) {
-      controller.deleteTask(tasks[index]);
-    },
-                  child: GestureDetector(
-                    onTap: () => controller.showStatusBottomSheet(tasks[index]),
-                    child: _AnimatedTaskCard(task: tasks[index], index: index)),
-                );
-              },
-            ),
-          ),
-          onLoading: const _TaskListShimmer(),
-          onEmpty: const Center(child: Text("No tasks found")),
-          onError: (e) => Center(child: Text("Error: $e")),
+    return Obx(
+      () => Scaffold(
+        backgroundColor: const Color(0xFFF6F7FB),
+        appBar: AppBar(
+          title: const Text("My Tasks"),
+          centerTitle: true,
+          elevation: 0,
+          systemOverlayStyle: controller.isOffline.value
+              ? const SystemUiOverlayStyle(
+                  statusBarColor: Colors.red, // Offline Color
+                  statusBarIconBrightness: Brightness.light,
+                )
+              : SystemUiOverlayStyle.dark.copyWith(
+                  statusBarColor: Colors.transparent, // Online (Default) Color
+                ),
         ),
+        body: RefreshIndicator(
+          onRefresh: controller.refreshTasks,
+          child: controller.obx(
+            (tasks) => Obx(
+              () => ListView.builder(
+                controller: controller.scrollController,
+                padding: const EdgeInsets.all(16),
+                itemCount:
+                    tasks!.length + (controller.isMoreLoading.value ? 1 : 0),
+                itemBuilder: (context, index) {
+                  if (index == tasks.length) {
+                    return const _PaginationLoader();
+                  }
+
+                  return Dismissible(
+                    key: Key(tasks[index].id),
+                    direction: DismissDirection.endToStart,
+
+                    background: Container(
+                      margin: const EdgeInsets.only(bottom: 18),
+                      decoration: BoxDecoration(
+                        color: Colors.red.shade400,
+                        borderRadius: BorderRadius.circular(18),
+                      ),
+                      alignment: Alignment.centerRight,
+                      padding: const EdgeInsets.only(right: 20),
+                      child: const Icon(
+                        Icons.delete_outline,
+                        color: Colors.white,
+                        size: 28,
+                      ),
+                    ),
+
+                    onDismissed: (direction) {
+                      controller.deleteTask(tasks[index]);
+                    },
+                    child: GestureDetector(
+                      onTap: () =>
+                          controller.showStatusBottomSheet(tasks[index]),
+                      child: _AnimatedTaskCard(
+                        task: tasks[index],
+                        index: index,
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+            onLoading:  _TaskListShimmer(),
+            onEmpty: const Center(child: Text("No tasks found")),
+            onError: (e) => Center(child: Text("Error: $e")),
+          ),
+        ),
+        
+     floatingActionButton: AnimatedSwitcher(
+    duration: const Duration(milliseconds: 250),
+    transitionBuilder: (child, animation) =>
+        ScaleTransition(scale: animation, child: child),
+    child:  Material(
+            key: const ValueKey("fab_ripple"),
+            color: Colors.transparent,
+            shape: const StadiumBorder(),
+            elevation: 10,
+            shadowColor:
+                Get.theme.colorScheme.primary.withOpacity(0.35),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(28),
+              splashColor:
+                  Get.theme.colorScheme.primary.withOpacity(0.35),
+              highlightColor:
+                  Get.theme.colorScheme.primary.withOpacity(0.15),
+              onTap: () {
+               Get.to(() => const AddTaskScreen());
+              },
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                decoration: BoxDecoration(
+                  color: Get.theme.colorScheme.primary,
+                  borderRadius: BorderRadius.circular(28),
+                ),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.add, color: Colors.white),
+                    SizedBox(width: 8),
+                    Text(
+                      "Add Task",
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          
+         
+  ),
+),
+
+     
       ),
     );
   }
@@ -176,9 +247,7 @@ class _TaskCardShimmer extends StatelessWidget {
   }
 }
 
-
 //!/*                               ANIMATED CARD                                */
-
 
 class _AnimatedTaskCard extends StatelessWidget {
   final TaskModel task;
@@ -206,7 +275,6 @@ class _AnimatedTaskCard extends StatelessWidget {
   }
 }
 
-
 //!/*                                  TASK CARD                                 */
 
 class _TaskCard extends StatelessWidget {
@@ -225,7 +293,6 @@ class _TaskCard extends StatelessWidget {
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(18),
 
-      
         color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
 
         gradient: LinearGradient(
